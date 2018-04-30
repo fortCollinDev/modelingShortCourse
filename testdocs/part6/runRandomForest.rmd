@@ -1,0 +1,170 @@
+---
+title: "Running A Random Forest Model"
+author: "Dan Carver"
+date: "04/04/2018"
+output:
+  html_document:
+    highlight: tango
+    number_sections: yes
+    theme: journal
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+#this include parameter set to false ensures that the code in this section is not shown in the final product.
+knitr::opts_chunk$set(echo = TRUE)
+library(rmarkdown)
+```
+
+<center><h1>**Running a Random Forest Model**</h1></center>
+<center><h3>**DEVELOP Fort Collins** </h3></center>
+<center><h4>*Authors:Daniel Carver*</h4></center>
+
+
+ =-=-=-=-===-=-=-=-=-===-=-=-=-=-===-=-=-=-=-===-=-=-=-=-===-=-=-=-=-===-=-=-=-=-===-=-=-=-==-=-=-=-===
+
+# Running Through Random Forest
+While this may not be as fun as running through a real forest, it's not a bad substitute for a rainy day and it certainly tells you a lot more about how much tamarisk is out there.
+
+## Setting the Stage
+Let's get started by ensuring all our ducks are in a row. Below is a listing of all the packages that are used by R to complete this analysis.
+
+```{r}
+# installs packages that are not installed yet and loads all packages needed
+pacman::p_load(raster, shapefiles, sp, rgdal, randomForest, caret, e1071,
+               MASS, ROCR, corrplot, rfUtilities, VSURF, rmarkdown)
+# this is your working directory, it shows where all the files will be stored
+wd <-getwd()
+print(wd)
+```
+
+## What is Random Forest
+Random Forest is a type of Classifaction And Regression Tree (CART) algorithm. Most people know these as decision trees, where a choice at a junction decides which path to move forward on. Random Forest really is a forest in the sense that it generates hundreds if not thousands of decision trees. The randomness of it comes from how it chooses which variables are in each tree as well as which data points are used to build or train the individual decision trees. Being a machine learning algorithm, things get complicated rather quickly. Don't think you can't understand what's going on in the analysis, you will just need to put on your thinking cap and spend some time with it. I suggest starting with this excellent visual explanation of the machine learning proces.
+
+[Example of How Machine Learning Works](http://www.r2d3.us/visual-intro-to-machine-learning-part-1/)
+
+Before continuing with our tutorial, it is important to know that the Random Forest algorithm which we rely on requires three user defined components.
+
+1. Regression or Binary
+    + Regressions can be used with continuous data such as percent  cover.
+    + Binary models should be used with categorical data such as presence/absence (yes/no).
+2. Response Variable
+    + This is the variable which the model is attempting to predict. In our case this will either be percent cover (regression) or presence (binary).
+3. Predictor Variables
+    + These are the measured characteristics that will be used to predict the percent cover or presence of our target. In our case, our predictor variables are data derived from remotely sensed imagery.
+
+
+## Binary or Regression model
+In order to decide which model approach is most applicable, let's take a look at our data.
+
+```{r}
+
+# read inCSV file and save as an object
+data <- read.csv("runRF.csv")
+
+#print column name to identify the response and predictor variables
+colnames(data)
+head(data)
+
+```
+
+Okay, we see some standing information such as ID, X and Y coordinates, and year. But remember, we need a response variable and predictor variables to run Random Forest. The columns 'PresenceAb' and 'Percent_Cov' seem like they would work for the response variables.For our predictor variables we will use the other columns that are associated with the remotely sensed data; ['blue', 'green', 'red', 'nir'].
+If we want to create a binary (presence or absence) model we can use the 'PresenceAb' as out predictor
+If we used 'Percent_Cov' we would end up with a continuous model that predicted the percent cover for a given cell.
+For this purpose let's start with the **Binary Model**
+
+
+To run the model we first want to define our response variable and predictor variable
+For binary models the response variable needs to be in a specific data type called **Factor**
+
+```{r}
+
+#redefine the response variable data type to factor and save it as a new dataframe
+responseVar <- as.factor(data$PresenceAb)
+
+#create a new df with all the predictorvariables
+predictorVariables <- Data[,8:11]
+
+```
+With the data prepared we can set it into our model
+Random Forest makes 'random' choices when it runs. To make it so we can re run our model and get the same result we want to set a random seed. A seed is a series of randomly generated numbers. Each seed is unique but it's sequence is known. Conceptually this is a little odd but in the long run the seed you use  will not significantly change your result.
+
+We need to define parameters for out random forest function. We've talked about the response and predictor variables already. ntree and mtry are two other parameters that you can control that influence the model.
+- ntree: stands for the number of trees your model will use. Each tree votes the importance of the number of trees is something to explore but a generally accepted starting point is 2000
+- mtry: is the number of variables that will be considered in each tree. The effects of the mtry are a bit more complicated. We suggest expreimenting with that value to see how it effect model performance. For now it is set to 2 because we have vary few predictors. You can always leave it blank and the function will assign the mtry based on how many predictors your have.
+
+```{r}
+
+set.seed(123)
+
+rf_modelBI = randomForest(x = predictorVariables, y = responseVar, ntree = 2000, mtry = 2)
+
+```
+
+There we have it. It's nice having the computer do all the number crunching for us.
+We saved out model results to a variable so we can view them by printing the variable.
+Also we can generate a few other accuracy assessments that will be helpful in our model evaluation.
+
+```{r}
+rf_modelBI
+
+predicted <- predict(rf_modelBI)
+observed <- data$responseVar
+
+aos <- accuracy(x=predicted, y=observed)
+
+```
+
+The result from the binary model is displayed. The important values are to keep in mind are the Out Of Bag Error (OOB). This is unique to the model and is a good quick comparison. From the accuracy function we can see our confusion matrix aos$ConfusionMatrix. Most other evaluations are built on this struture so it's a good one to have at hand.
+
+
+To run this model using the continuous data set weed to switch up the structure just a bit.
+
+```
+
+set.seed(123)
+#read in data
+data <- read.csv("runRF.csv")
+
+#redefine the response variable data type to factor and save it as a new dataframe
+responseVarContinuous <- as.factor(data$Percent_Cov)
+
+#create a new df with all the predictorvariables
+predictorVariables <- Data[,8:11]
+
+#combined the two dataframes
+data1 <- cbind(responseVarContinuous, predictorVariables)
+
+# run the random forest model where the response variable is being predicted # by all other variables within the data frame "dataset"
+rf_model1 = randomForest(responseVar ~ ., data = data1, ntree = 2000, mtry = 2)
+
+```
+
+
+
+
+
+
+## Running the Code and Interpreting the Results
+
+Now with our response variable and predictor variables established, let's run the Random Forest model.
+We're first going to combine the response variable and predictor variables into the same data frame. Once that is done, we will set up our model and let it run.
+```{r fig.cap = "Results of the regression random forest model. These values are useful for comparing values across multiple models when testing model input or parameters."}
+# define the response variable
+responce_var <- data$Percent_Cov
+# define the predictor variables
+predictor_var <- rastercolumns_cov2
+# combine the two to a single data frame
+dataset <- cbind(responce_var, predictor_var)
+# run the random forest model where the response variable is being predicted # by all other variables within the data frame "dataset"
+rf_model1 = randomForest(responce_var ~ ., data = dataset, importance = TRUE)
+# print the results of the rf model.
+rf_model1
+
+```
+
+Much like about there are lots and lots of evaulations that can be performed on the model output. What you choose to due depends strongly on the goals and questions of your study.
+
+What should be clear from this is that the process of running the model is not the challenging part. It's a few lines of code. That said, this only works because the data was prepared for for a very specific purpose. Also just getting the model leaves you with the tasks of interpreting, projecting, and understanding what the results means. Hopefully this will help you spend more time on those interesting questions.
