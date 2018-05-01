@@ -11,6 +11,9 @@ output:
   pdf_document:
     toc: yes
 ---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
 # Variable Selection
 In the world of ecological systems everything is connected. As a result, there are lots and lots of variables or predictors that can be used to defined any given systes. In a perfect world if we wanted to model ecological conditions we would compile all the factors that influence that system and feed it all into our model. Luckly for us our world is not perfect.
 A better way to look at the modelling process is to pratice the **priciple of parsimony**. Which is essential explain the system as well as you can with the fewest number of variables. This is where expect opinion comes in handy. If your trying to predict the presence of a specific tree species knowing it's ecological range and ideal growing conditions will allow you to define what predictor variables make the most sense for your model. Yet sometimes you might be tasked with modelling a system where those constriants are not well known or the data that represents those limits are not contained in available datasets. At this point using a computer to select the ideal variables for you is a trusted method that will give your work a credible foot to stand on.  
@@ -29,10 +32,12 @@ print(wd)
 ## Pulling in and examing predictor variables
 For this example were going to look at a dataset that consists of remotely sensed reflectance values for various geographic locations where a species is either presence or absence. To run our variable selection process we will need to define our responce variable and predictor variables. Our variable selection process will tell us which variable best predict the responce variable. Let's pull it into R and look at what we are working with.
 
+Open the csv in excel and check out the data before bringing it into R
+
 ```{r}
 
 # import the csv as a data frame
-data <- read.csv(testData1.csv)
+data <- read.csv('testData1.csv')
 
 # get an idea of the size of the data frame
 rows <- nrow(data)
@@ -45,7 +50,7 @@ That's quite a bit of data. Printing out the whole thing would be a bit of a mes
 head(data[,1:10])
 
 # check the end of the dataset as well
-colNames(data[125:135])
+colnames(data[125:135])
 ```
 Okay, that's better. We see some stadard information such as ID, X and Y coordinates, and year. Our last variable is "X0415_blue", which refers to the blue band of a Landsat image (specifically April 2015). We will be able to use the 'PercentAb' as our responce variables and all the remotely sensed data as the predictor variables.
 
@@ -72,6 +77,7 @@ rastercolumns <- data[, 10:135]
 
 #Run the rf utilities fuction to rank the variable in order of importance
 varimportance_cov <- rf.modelSel(rastercolumns, data$Percent_Cov, imp.scale="se")
+### look up imp.scale="se"
 
 #create a dataframe with the rownames(predictor names) and thier relative importance
 #this willproduce one column of variable names and one column of values
@@ -114,24 +120,24 @@ corrplot(correlation,method="number")
 
 This correlation plot shows how the top ten prediction variables are correlated with one another. We're going to work at removing relationships where variables are correlated at values greater then 70 percent. We will favor the variables that have more predictive power. Below is a step by step process as to how we slimmed down number of variables.
 
-Here is a written descriptive of the process
 
-1. Start with the first column. Note the position of any variable with >|0.7| correlation
+
+1. Start with the first row. Note the position of any variable with >|0.7| correlation
     + No correlations present
-2. Move to the second column and repeat
-    + 5, X0616_mndwi
-    + 9, X0415_Twet
-    + 10, X0716_mndwi
+2. Move to the second row and repeat
+    + 5
+    + 9
+    + 10
 3. Move to the thrid column and repeat
-    + 4, X0815_gemi
-    + 7, X0716_slavi
+    + 6
+    + 7
 
 At this point it becomes difficult to remember which columns have been removed. Let's rerun our correlation plot removing the correlated indicies we've already identified (5,9,10,4,7)
 
 ```{r fig.cap = "A second correlation plot using a subset of the original top ten predictors. Producing multiple correlation plots is advisable to attempt to decipher large correlation plots."}
 
 # We're using indexing to remove the rows that correspond to the correlated predictor variables
-rastercolumns_cov2 <- rastercolumns[,as.character(raster_cov_names)[-c(5,9,10,4,7)]]
+rastercolumns_cov2 <- rastercolumns[,as.character(raster_cov_names)[-c(5,9,10,6,7)]]
 
 # Calculate correlation coefficient matrix
 correlation2 <-cor(rastercolumns_cov2, method="pearson")
@@ -146,7 +152,7 @@ It's good to package this up into a usable dataframe going forward.
 ```{r}
 #create a new dataframe with the presence absence value (named species_PA) and
 # the final predictors that you will using going forward in the modeling process
-selected_binary <- cbind(species_PA = data$PresenceAb,  rastercolumns_cov2)
+selected_binary <- cbind(species_cov = data$Percent_Cov,  rastercolumns_cov2)
 ```
 
 
@@ -156,6 +162,16 @@ The process belows allows you to accomplish the same thing but it's all down wit
 
 
 ```{r}
+
+rastercolumns_cov <- data[,as.character(raster_cov_names)]
+
+# Calculate correlation coefficient matrix
+correlation <-cor(rastercolumns_cov, method="pearson")
+
+# Plot the correlation. The darker the number,
+# the more correlated the two variables
+corrplot(correlation,method="number")
+
 # the read line funtion will show up in your code editors console. You will have to type the numbers in there following the specific format defined below.
 x1 <- readline("Enter the numbers that you would like to remove seperated by commas. eg (4,25,3)")
 x1 <- as.numeric(unlist(strsplit(x1, ",")))
@@ -191,7 +207,7 @@ correlation <-cor(select_var3, method="pearson")
 corrplot(correlation,method="number")
 
 #at this point there are 8 variables that are not correlated binded them to the binary indence and put into rf model
-selected_binary <- cbind(species_PA = Data$PresenceAb,  select_var1)
+selected_binary <- cbind(species_PA = Data$Percent_Cov,  select_var1)
 
 ```
 ## Wrapping It Up

@@ -37,34 +37,32 @@ Notice on the right side of the window, there is an "Import" button. Click this 
 
 It's interesting to note that you have imported the entire imagery data collection, which consists of all imagery collected over the given time frame and the given area for that sensor. For analysis, you can specify specific images or a region of interest you would like to use. We'll get to this in a bit.
 
+```javascript
+var LS8_SR = ee.ImageCollection(LS8_SR).mosaic()
+```
 
 We can use a variety of functions to limit our data. In GEE, you can perform multiple functions to a dataset at the same time by just adding them onto the end, separated by a period. First, we will limit our image collection to Landsat Path/Row 28/28 for the 2015-2016 calendar year.We can limit by Path/Row by using the **.filter(ee.Filter.eq())** function, and we can limit by date by using the **.filterDate()** function. Here, we've limited our data to the year of 2015. We would also like imagery with relatively few clouds, so we can also limit it by cloud cover. In this example, we use a cloud cover limit of less than 20 percent. The **.mosaic** function quickly and seamlessly mosaicks an image collection together, which is useful when using mutliple scenes.
 
 Copy-paste this script into the Code Editor, and click the **"Run"** button at the top-right:
 
 ```javascript
-var LS8_SR = ee.ImageCollection(LS8_SR)
+var LS8_SR1 = ee.ImageCollection(LS8_SR)
   .filterDate('2015-01-01', '2016-01-01')
   .filter(ee.Filter.eq('WRS_PATH', 28))
   .filter(ee.Filter.eq('WRS_ROW', 28))
   .filterMetadata('CLOUD_COVER', 'less_than', 20).mosaic();
-```
-Although we use many filters to narrow down our dataset in this example, you also have the option of running the entire dataset by leaving off the filters:
-
-```javascript
-var LS8_SR = ee.ImageCollection(LS8_SR).mosaic()
 ```
 
 At the top, we have renamed the Landsat bands to something a little more intuitive. Each is defined as a variable, **"var"**.
 Notice that nothing actually happened after you ran this script. In order to see your Image Collection on the map, you must use the **Map.addLayer()** function.
 
 ```javascript
-Map.addLayer(LS8_SR)
+Map.addLayer(LS8_SR1)
 ```
 
 If you'd like to view information on this dataset in the Console, use the **print()** function.
 ```javascript
-print(LS8_SR,'LS8_SR')
+print(LS8_SR1,'LS8_SR1')
 ```
 The imported dataset should now be visible in the Console tab, located in the window on the right. Take time to explore the data structure by clicking on the dataset here.  
 ![Console.](Console.jpg)
@@ -79,12 +77,12 @@ Now, we see that a geometry import has been added under **Imports**. It is autom
 
 We can now limit our Image Collection by this region of interest by redefining the filter bounds by our "roi" geometry. Replace your previous script chunk defining the LS8_SR script with this chunk:
 ```javascript
-var LS8_SR = ee.ImageCollection(LS8_SR)
+var LS8_SR2 = ee.ImageCollection(LS8_SR)
 .filterDate('2015-01-01', '2016-01-01')
   .filterBounds(roi)
   .filterMetadata('CLOUD_COVER', 'less_than', 20).mosaic();
-Map.addLayer(LS8_SR)
-print(LS8_SR,'LS8_SR')
+Map.addLayer(LS8_SR2)
+print(LS8_SR2,'LS8_SR2')
 ```
 If you'd like to comment out bits of code (keep the code in the script but de-activate it), you can add a double-backslash in front of the line(s) you want to comment out. A shortcut for this on Windows is Ctrl+/.
 
@@ -93,15 +91,15 @@ If you'd like to comment out bits of code (keep the code in the script but de-ac
 In order to define indices, we have to perform some band math. Before we do this, we must first define our individual bands as variables. For this excercise, we'll use bands 1-7, excluding band 6. If we want, we can add on the **.rename** function to rename these bands within the console.
 
 ```javascript
-var red = LS8_SR.select('B3').rename("red")
-var green= LS8_SR.select('B2').rename("green")
-var blue = LS8_SR.select('B1').rename("blue")
-var nir = LS8_SR.select('B4').rename("nir")
-var swir1 = LS8_SR.select('B5').rename("swir1")
-var swir2 = LS8_SR.select('B7').rename("swir2")
-print(red)
+var red = LS8_SR2.select('B3').rename("red")
+var green= LS8_SR2.select('B2').rename("green")
+var blue = LS8_SR2.select('B1').rename("blue")
+var nir = LS8_SR2.select('B4').rename("nir")
+var swir1 = LS8_SR2.select('B5').rename("swir1")
+var swir2 = LS8_SR2.select('B7').rename("swir2")
+print(red,'red')
 Map.addLayer(red)
-print(green)
+print(green, 'green')
 Map.addLayer(green)
 
 ```
@@ -212,7 +210,7 @@ Now, we have created a classifier, but we have not yet applied it. Lastly, we wi
 ```javascript
 var classified = predictors.classify(trainingclassifier).clip(roi);
 
-print(classified)
+print(classified, 'classified')
 
 ```
 ## Viewing the result
@@ -226,7 +224,7 @@ Finally, export the output as a csv (or an alternate file type, if you prefer) t
 ```javascript
 Export.table.toDrive({
   collection: samples,
-  description:'Predictor Points',
+  description:'PredictorPoints',
   fileNamePrefix: 'Predictor_Points',
   fileFormat: 'CSV'
 });

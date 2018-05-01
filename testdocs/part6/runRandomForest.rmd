@@ -18,12 +18,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(rmarkdown)
 ```
 
-<center><h1>**Running a Random Forest Model**</h1></center>
-<center><h3>**DEVELOP Fort Collins** </h3></center>
-<center><h4>*Authors:Daniel Carver*</h4></center>
-
-
- =-=-=-=-===-=-=-=-=-===-=-=-=-=-===-=-=-=-=-===-=-=-=-=-===-=-=-=-=-===-=-=-=-=-===-=-=-=-==-=-=-=-===
 
 # Running Through Random Forest
 While this may not be as fun as running through a real forest, it's not a bad substitute for a rainy day and it certainly tells you a lot more about how much tamarisk is out there.
@@ -85,7 +79,7 @@ For binary models the response variable needs to be in a specific data type call
 responseVar <- as.factor(data$PresenceAb)
 
 #create a new df with all the predictorvariables
-predictorVariables <- Data[,8:11]
+predictorVariables <- data[,8:11]
 
 ```
 With the data prepared we can set it into our model
@@ -108,43 +102,23 @@ We saved out model results to a variable so we can view them by printing the var
 Also we can generate a few other accuracy assessments that will be helpful in our model evaluation.
 
 ```{r}
+#print the model data
 rf_modelBI
 
+#run the predict function on the rf_modelBI variable defined above
 predicted <- predict(rf_modelBI)
-observed <- data$responseVar
+#define the observed variable
+observed <- responseVar
 
+#run the accuracy function
 aos <- accuracy(x=predicted, y=observed)
-
+aos
 ```
 
 The result from the binary model is displayed. The important values are to keep in mind are the Out Of Bag Error (OOB). This is unique to the model and is a good quick comparison. From the accuracy function we can see our confusion matrix aos$ConfusionMatrix. Most other evaluations are built on this struture so it's a good one to have at hand.
 
 
-To run this model using the continuous data set weed to switch up the structure just a bit.
-
-```
-
-set.seed(123)
-#read in data
-data <- read.csv("runRF.csv")
-
-#redefine the response variable data type to factor and save it as a new dataframe
-responseVarContinuous <- as.factor(data$Percent_Cov)
-
-#create a new df with all the predictorvariables
-predictorVariables <- Data[,8:11]
-
-#combined the two dataframes
-data1 <- cbind(responseVarContinuous, predictorVariables)
-
-# run the random forest model where the response variable is being predicted # by all other variables within the data frame "dataset"
-rf_model1 = randomForest(responseVar ~ ., data = data1, ntree = 2000, mtry = 2)
-
-```
-
-
-
-
+To run this model using the continuous data set we need to switch up the structure just a bit.
 
 
 ## Running the Code and Interpreting the Results
