@@ -26,9 +26,6 @@ While this may not be as fun as running through a real forest, it's not a bad su
 Let's get started by ensuring all our ducks are in a row. Below is a listing of all the packages that are used by R to complete this analysis.
 
 ```{r}
-# installs packages that are not installed yet and loads all packages needed
-pacman::p_load(raster, shapefiles, sp, rgdal, randomForest, caret, e1071,
-               MASS, ROCR, corrplot, rfUtilities, VSURF, rmarkdown)
 # this is your working directory, it shows where all the files will be stored
 wd <-getwd()
 print(wd)
@@ -79,7 +76,7 @@ For binary models the response variable needs to be in a specific data type call
 responseVar <- as.factor(data$PresenceAb)
 
 #create a new df with all the predictorvariables
-predictorVariables <- data[,8:11]
+predictorVariables <- data[,9:12]
 
 ```
 With the data prepared we can set it into our model
@@ -90,7 +87,11 @@ We need to define parameters for out random forest function. We've talked about 
 - mtry: is the number of variables that will be considered in each tree. The effects of the mtry are a bit more complicated. We suggest expreimenting with that value to see how it effect model performance. For now it is set to 2 because we have vary few predictors. You can always leave it blank and the function will assign the mtry based on how many predictors your have.
 
 ```{r}
+install.packages("randomForest")
+library(randomForest)
+```
 
+```{r}
 set.seed(123)
 
 rf_modelBI = randomForest(x = predictorVariables, y = responseVar, ntree = 2000, mtry = 2)
@@ -102,17 +103,25 @@ We saved out model results to a variable so we can view them by printing the var
 Also we can generate a few other accuracy assessments that will be helpful in our model evaluation.
 
 ```{r}
+library(rfUtilities)
+
+```
+
+```{r}
 #print the model data
 rf_modelBI
 
 #run the predict function on the rf_modelBI variable defined above
 predicted <- predict(rf_modelBI)
 #define the observed variable
-observed <- responseVar
+observed <- as.factor(responseVar)
+
+
 
 #run the accuracy function
-aos <- accuracy(x=predicted, y=observed)
+aos <- accuracy(x=predicted, y=predicted)
 aos
+
 ```
 
 The result from the binary model is displayed. The important values are to keep in mind are the Out Of Bag Error (OOB). This is unique to the model and is a good quick comparison. From the accuracy function we can see our confusion matrix aos$ConfusionMatrix. Most other evaluations are built on this struture so it's a good one to have at hand.
@@ -129,7 +138,7 @@ We're first going to combine the response variable and predictor variables into 
 # define the response variable
 responce_var <- data$Percent_Cov
 # define the predictor variables
-predictor_var <- rastercolumns_cov2
+predictor_var <- predictorVariables
 # combine the two to a single data frame
 dataset <- cbind(responce_var, predictor_var)
 # run the random forest model where the response variable is being predicted # by all other variables within the data frame "dataset"
@@ -142,3 +151,38 @@ rf_model1
 Much like about there are lots and lots of evaulations that can be performed on the model output. What you choose to due depends strongly on the goals and questions of your study.
 
 What should be clear from this is that the process of running the model is not the challenging part. It's a few lines of code. That said, this only works because the data was prepared for for a very specific purpose. Also just getting the model leaves you with the tasks of interpreting, projecting, and understanding what the results means. Hopefully this will help you spend more time on those interesting questions.
+
+
+## Creating an image output 
+To develop an image output of model we need to apply the algorythm to the predictor images. 
+We will start by bringing in landsat scenes. 
+
+```{r}
+install.packages("raster")
+library(raster)
+```
+
+```{r}
+#change you working director to match the location of the fold this file was in 
+
+#import the relative path to the images. Name them something that makes sense 
+blue=raster("blue.tif")
+green=raster("green.tif")
+red=raster("red.tif")
+nir=raster("nir.tif")
+
+
+# Stack the objects into one dataframe
+stack_4band=stack(blue,green,red,nir)
+
+# Add header names - these neames need to match your column names on your predictor variables 
+names(predictorVariables)
+
+
+names(stack_4band)=c('blue', 'green', 'red', 'nir')
+
+#####################################################map it, BINARY FIRST, then CONTINUOUS###################################
+predict(stack_4band, rf_modelBI, filename="modeloutput.tif",fun=predict,format="GTiff",datatype="INT1S",overwrite=TRUE )
+
+output <- raster("modeloutput.tif")
+plot(output)

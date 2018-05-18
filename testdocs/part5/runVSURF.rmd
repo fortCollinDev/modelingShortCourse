@@ -22,9 +22,6 @@ A better way to look at the modelling process is to pratice the **priciple of pa
 Let's get started by ensuring all our ducks are in a row. Below is a listing of all the packages that are used by R to complete this analysis.
 
 ```{r}
-# installs packages that are not installed yet and loads all packages needed
-pacman::p_load(raster, shapefiles, sp, rgdal, randomForest, caret, e1071,
-               MASS, ROCR, corrplot, rfUtilities, VSURF, rmarkdown)
 # this is your working directory, it shows where all the files will be stored
 wd <-getwd()
 print(wd)
@@ -69,6 +66,14 @@ For this example we're going to use the the variable selection function of rfUti
 If your doing this on your own it's import to have some justification to the which selection process you choose. So read up on the process, think about it, read it again, and hopefully something has stuck by then. These functions are not the most intuitive processes so be prepared to spend some time with the documentation if you really need to understand what is happening in the black box.   
 
 ```{r fig.cap = "List of the top ten predictors and there relative importance to the model. These are taken from 125 potential predictors."}
+
+#import Rf utilitties
+install.packages("rfUtilities", "randomForest")
+library(rfUtilities)
+```
+
+```{r}
+
 # Set random seed
 set.seed(123)
 
@@ -100,6 +105,11 @@ Alright, so we now have a ranked list of variables that is based on the rfUtilit
 ## Removing Correlated Variables
 Recursive models such as Random Forest handle correlated variables rather well, yet it is an established modeling technique to reduce the number of correlated variables.
 We will do this by inspecting a correlation matrix and deciding what stays and what goes. Ideally this decision process is informed by both correlation values and knowledge of the importance of the predictor in capturing ecological conditions. If you have that expert knowlegde, use it. If not, just follow the framework we've established below.
+
+```{r}
+install.packages('corrplot')
+library(corrplot)
+```
 
 ```{r fig.cap = "A correlation plot between the ten top predictors; a Pearsons correlation coefficient of 0.7 was used."}
 
@@ -176,7 +186,7 @@ corrplot(correlation,method="number")
 x1 <- readline("Enter the numbers that you would like to remove seperated by commas. eg (4,25,3)")
 x1 <- as.numeric(unlist(strsplit(x1, ",")))
 
-select_var1 <- select_var[,-c(x1)]
+select_var1 <- rastercolumns_cov[,-c(x1)]
 
 correlation <-cor(select_var1, method="pearson")
 corrplot(correlation,method="number")
@@ -207,7 +217,7 @@ correlation <-cor(select_var3, method="pearson")
 corrplot(correlation,method="number")
 
 #at this point there are 8 variables that are not correlated binded them to the binary indence and put into rf model
-selected_binary <- cbind(species_PA = Data$Percent_Cov,  select_var1)
+selected_binary <- cbind(species_PA = data$Percent_Cov,  select_var1)
 
 ```
 ## Wrapping It Up
