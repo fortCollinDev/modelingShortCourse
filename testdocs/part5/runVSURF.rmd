@@ -23,8 +23,8 @@ Let's get started by ensuring all our ducks are in a row. Below is a listing of 
 
 ```{r}
 # this is your working directory, it shows where all the files will be stored
-wd <-getwd()
-print(wd)
+getwd()
+
 ```
 ## Pulling in and examing predictor variables
 For this example were going to look at a dataset that consists of remotely sensed reflectance values for various geographic locations where a species is either presence or absence. To run our variable selection process we will need to define our responce variable and predictor variables. Our variable selection process will tell us which variable best predict the responce variable. Let's pull it into R and look at what we are working with.
@@ -222,6 +222,6 @@ selected_binary <- cbind(species_PA = data$Percent_Cov,  select_var1)
 ```
 ## Wrapping It Up
 Variable selection is import and it's a good process to spend time thinking about.
-While computers are good at what they do you should allows be asking if the results
+While computers are good at what they do you should all ways be asking if the results
 make sence to your specific project. These tools can provide justification for
 your results but they should never be the only reason you make your choices.

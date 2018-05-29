@@ -1,0 +1,13 @@
+<PAMDataset>
+  <Metadata>
+    <MDI key="Band_1">band 3 surface reflectance</MDI>
+  </Metadata>
+  <Metadata domain="Esri">
+    <MDI key="PyramidResamplingType">NEAREST</MDI>
+  </Metadata>
+  <PAMRasterBand band="1">
+    <Metadata>
+      <MDI key="DESCRIPTION">band 3 surface reflectance</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>

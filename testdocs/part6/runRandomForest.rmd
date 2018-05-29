@@ -13,10 +13,13 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+
 #this include parameter set to false ensures that the code in this section is not shown in the final product.
-knitr::opts_chunk$set(echo = TRUE)
-library(rmarkdown)
+knitr::opts_chunk$set(eval = FALSE)
 ```
+
+
+
 
 
 # Running Through Random Forest

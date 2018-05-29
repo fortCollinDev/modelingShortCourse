@@ -35,12 +35,7 @@ A window should appear with information on the dataset. It's a good idea to read
 Notice on the right side of the window, there is an "Import" button. Click this button to import the dataset. Notice that it now appears at the top of your scripting window. Click on the variable name (in purple) to type in a more specific name. For this example, we will use the name **"LS8_SR"**.  
 ![Imports.](Imports.jpg)
 
-It's interesting to note that you have imported the entire imagery data collection, which consists of all imagery collected over the given time frame and the given area for that sensor. For analysis, you can specify specific images or a region of interest you would like to use. We'll get to this in a bit.
-
-```javascript
-var LS8_SR = ee.ImageCollection(LS8_SR).mosaic()
-```
-
+It's interesting to note that you have imported the entire imagery data collection, which consists of all imagery collected over the given time frame and the given area for that sensor. 
 We can use a variety of functions to limit our data. In GEE, you can perform multiple functions to a dataset at the same time by just adding them onto the end, separated by a period. First, we will limit our image collection to Landsat Path/Row 28/28 for the 2015-2016 calendar year.We can limit by Path/Row by using the **.filter(ee.Filter.eq())** function, and we can limit by date by using the **.filterDate()** function. Here, we've limited our data to the year of 2015. We would also like imagery with relatively few clouds, so we can also limit it by cloud cover. In this example, we use a cloud cover limit of less than 20 percent. The **.mosaic** function quickly and seamlessly mosaicks an image collection together, which is useful when using mutliple scenes.
 
 Copy-paste this script into the Code Editor, and click the **"Run"** button at the top-right:
@@ -57,7 +52,7 @@ At the top, we have renamed the Landsat bands to something a little more intuiti
 Notice that nothing actually happened after you ran this script. In order to see your Image Collection on the map, you must use the **Map.addLayer()** function.
 
 ```javascript
-Map.addLayer(LS8_SR1)
+Map.addLayer(LS8_SR1,{},'LS8_SR1',false)
 ```
 
 If you'd like to view information on this dataset in the Console, use the **print()** function.
@@ -81,7 +76,7 @@ var LS8_SR2 = ee.ImageCollection(LS8_SR)
 .filterDate('2015-01-01', '2016-01-01')
   .filterBounds(roi)
   .filterMetadata('CLOUD_COVER', 'less_than', 20).mosaic();
-Map.addLayer(LS8_SR2)
+Map.addLayer(LS8_SR2,{},'LS8_SR2',false)
 print(LS8_SR2,'LS8_SR2')
 ```
 If you'd like to comment out bits of code (keep the code in the script but de-activate it), you can add a double-backslash in front of the line(s) you want to comment out. A shortcut for this on Windows is Ctrl+/.
@@ -98,9 +93,9 @@ var nir = LS8_SR2.select('B4').rename("nir")
 var swir1 = LS8_SR2.select('B5').rename("swir1")
 var swir2 = LS8_SR2.select('B7').rename("swir2")
 print(red,'red')
-Map.addLayer(red)
+Map.addLayer(red,{},'red',false)
 print(green, 'green')
-Map.addLayer(green)
+Map.addLayer(green,{},'green',false)
 
 ```
 Once you run the above code, print a band variable name and check out this band within the Console. When we expand the drop-down menus, we see that the band is now renamed as we have specified.  
@@ -147,17 +142,19 @@ Note that we have supposedly added these layers to the map, but they don't show 
 
 In order to extract values to points, you must first import your point dataset, in the form of a Google Fusion Table. Anyone can make a Fusion Table from a CSV as long as you have a google account. These tables also appear in your Google Drive. This short process in outlined in another Tutorial section, titled **"Creating Fusion Tables and Importing Data into Google Earth Engine"**. We recommend you read that first before proceeding.
 
-Now, we can define our point dataset by specifying the ID of our point data fusion table. In this case, we'll use an example fusion table that has been made public for this tutorial. This fusion table is a binary, presence-absence dataset of points collected in Minnesota using high-resolution imagery in GEE. These points indicate areas of wild rice presence and absence, so we have named the variable "PA". However, your data does not have to be binary.
+Now, we can define our point dataset by specifying the ID of our point data fusion table. In this case, we'll use an example fusion table that has been made public for this tutorial. This fusion table is a binary, presence-absence dataset of points collected in Iowa using high-resolution imagery in GEE. These points indicate areas of forest presence and absence, so we have named the variable "PA". However, your data does not have to be binary.
 
 ```javascript
-var PA_a = ee.FeatureCollection('ft:19YknBH-2mw2tl2ZGN6zDYpFaDx_10LP0lEl5r7Oh')
-
-
-var PA = PA_a.filterBounds(roi);
-Map.addLayer(PA,{},'PA')
+var PA = ee.FeatureCollection('ft:19YknBH-2mw2tl2ZGN6zDYpFaDx_10LP0lEl5r7Oh')
+Map.addLayer(PA,{},'PA') 
 print(PA,'PA')
 
 ```
+
+We can see that our points may not fall within our region of interest so lets edit that geometry so that it does match up. 
+<br>
+<br>
+<br>
 
 Next, we will create a list of our indices, which will serve as modeling predictors. To do this, we start a list of one object (in this case, the NIR band), then add bands to the list, until we have included all of the bands we want to use.
 ```javascript
@@ -188,7 +185,7 @@ print(samples,'samples')
 Next, we want to train our model. This is where the **ee.Classifier.randomForest** function comes in. Here, we have a number of parameters specified for each argument, although you may want to experiment with these parameter values yourself. Increasing the number of trees can generally increase accuracy, although this will slow down processing time in GEE, and you may not see much improvement over a certain threshold.
 
 
-```Javascript
+```javascript
 var trainingclassifier = ee.Classifier.randomForest({
                   numberOfTrees: 10,
                   variablesPerSplit: 0,
