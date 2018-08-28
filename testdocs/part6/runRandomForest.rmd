@@ -79,7 +79,8 @@ For binary models the response variable needs to be in a specific data type call
 responseVar <- as.factor(data$PresenceAb)
 
 #create a new df with all the predictorvariables
-predictorVariables <- data[,9:12]
+predictorVariables <- data %>% 
+  select(9:12)
 
 ```
 With the data prepared we can set it into our model
@@ -90,8 +91,10 @@ We need to define parameters for out random forest function. We've talked about 
 - mtry: is the number of variables that will be considered in each tree. The effects of the mtry are a bit more complicated. We suggest expreimenting with that value to see how it effect model performance. For now it is set to 2 because we have vary few predictors. You can always leave it blank and the function will assign the mtry based on how many predictors your have.
 
 ```{r}
-install.packages("randomForest")
+install.packages("randomForest", "ggplot2")
 library(randomForest)
+library(ggplot2)
+library(dplyr)
 ```
 
 ```{r}
@@ -122,7 +125,7 @@ observed <- as.factor(responseVar)
 
 
 #run the accuracy function
-aos <- accuracy(x=predicted, y=predicted)
+aos <- accuracy(x=predicted, y=observed)
 aos
 
 ```
@@ -138,20 +141,29 @@ To run this model using the continuous data set we need to switch up the structu
 Now with our response variable and predictor variables established, let's run the Random Forest model.
 We're first going to combine the response variable and predictor variables into the same data frame. Once that is done, we will set up our model and let it run.
 ```{r fig.cap = "Results of the regression random forest model. These values are useful for comparing values across multiple models when testing model input or parameters."}
-# define the response variable
-responce_var <- data$Percent_Cov
-# define the predictor variables
-predictor_var <- predictorVariables
-# combine the two to a single data frame
-dataset <- cbind(responce_var, predictor_var)
+
+# construct a df of predictor and repsponce variables
+dataset <- predictorVariables %>% 
+  mutate(responce_var = data$Percent_Cov)
 # run the random forest model where the response variable is being predicted # by all other variables within the data frame "dataset"
 rf_model1 = randomForest(responce_var ~ ., data = dataset, importance = TRUE)
+
 # print the results of the rf model.
 rf_model1
 
+#construct a new tbl to plot results 
+var2 <- dplyr::tbl_df(var1) %>% 
+  mutate(rf_model1$y) %>%
+  dplyr::rename(predicted = "value", actual = 'rf_model1$y')
+# define plot 
+plot <- ggplot(var2, aes(x= actual, y= predicted))
+# parameterise the plot and display 
+plot + geom_point(shape=1)+    # Use hollow circles
+    geom_smooth()+            # Add a loess smoothed fit curve with confidence region
+    labs(title="Predicted over Actual",
+        x ="Measure Value", y = "Predicted Value")
 ```
-
-Much like about there are lots and lots of evaulations that can be performed on the model output. What you choose to due depends strongly on the goals and questions of your study.
+This plots shows the relationship between the predicted and acutal data. The blue line is a best fit trend and the dark gray are is the are of confidence around that trend. It's easy to see that our model is not really a good representation of the system. This is just one of many evaulations that can be performed on the model output. What you choose to due depends strongly on the goals and questions of your study.
 
 What should be clear from this is that the process of running the model is not the challenging part. It's a few lines of code. That said, this only works because the data was prepared for for a very specific purpose. Also just getting the model leaves you with the tasks of interpreting, projecting, and understanding what the results means. Hopefully this will help you spend more time on those interesting questions.
 

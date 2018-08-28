@@ -416,11 +416,14 @@ $(document).ready(function () {
 <a class="sourceLine" id="cb3-2" data-line-number="2">responseVar &lt;-<span class="st"> </span><span class="kw">as.factor</span>(data<span class="op">$</span>PresenceAb)</a>
 <a class="sourceLine" id="cb3-3" data-line-number="3"></a>
 <a class="sourceLine" id="cb3-4" data-line-number="4"><span class="co">#create a new df with all the predictorvariables</span></a>
-<a class="sourceLine" id="cb3-5" data-line-number="5">predictorVariables &lt;-<span class="st"> </span>data[,<span class="dv">9</span><span class="op">:</span><span class="dv">12</span>]</a></code></pre></div>
+<a class="sourceLine" id="cb3-5" data-line-number="5">predictorVariables &lt;-<span class="st"> </span>data <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb3-6" data-line-number="6"><span class="st">  </span><span class="kw">select</span>(<span class="dv">9</span><span class="op">:</span><span class="dv">12</span>)</a></code></pre></div>
 <p>With the data prepared we can set it into our model Random Forest makes ‘random’ choices when it runs. To make it so we can re run our model and get the same result we want to set a random seed. A seed is a series of randomly generated numbers. Each seed is unique but it’s sequence is known. Conceptually this is a little odd but in the long run the seed you use will not significantly change your result.</p>
 <p>We need to define parameters for out random forest function. We’ve talked about the response and predictor variables already. ntree and mtry are two other parameters that you can control that influence the model. - ntree: stands for the number of trees your model will use. Each tree votes the importance of the number of trees is something to explore but a generally accepted starting point is 2000 - mtry: is the number of variables that will be considered in each tree. The effects of the mtry are a bit more complicated. We suggest expreimenting with that value to see how it effect model performance. For now it is set to 2 because we have vary few predictors. You can always leave it blank and the function will assign the mtry based on how many predictors your have.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="kw">install.packages</span>(<span class="st">&quot;randomForest&quot;</span>)</a>
-<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="kw">library</span>(randomForest)</a></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="kw">install.packages</span>(<span class="st">&quot;randomForest&quot;</span>, <span class="st">&quot;ggplot2&quot;</span>)</a>
+<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="kw">library</span>(randomForest)</a>
+<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="kw">library</span>(ggplot2)</a>
+<a class="sourceLine" id="cb4-4" data-line-number="4"><span class="kw">library</span>(dplyr)</a></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="kw">set.seed</span>(<span class="dv">123</span>)</a>
 <a class="sourceLine" id="cb5-2" data-line-number="2"></a>
 <a class="sourceLine" id="cb5-3" data-line-number="3">rf_modelBI =<span class="st"> </span><span class="kw">randomForest</span>(<span class="dt">x =</span> predictorVariables, <span class="dt">y =</span> responseVar, <span class="dt">ntree =</span> <span class="dv">2000</span>, <span class="dt">mtry =</span> <span class="dv">2</span>)</a></code></pre></div>
@@ -437,7 +440,7 @@ $(document).ready(function () {
 <a class="sourceLine" id="cb7-9" data-line-number="9"></a>
 <a class="sourceLine" id="cb7-10" data-line-number="10"></a>
 <a class="sourceLine" id="cb7-11" data-line-number="11"><span class="co">#run the accuracy function</span></a>
-<a class="sourceLine" id="cb7-12" data-line-number="12">aos &lt;-<span class="st"> </span><span class="kw">accuracy</span>(<span class="dt">x=</span>predicted, <span class="dt">y=</span>predicted)</a>
+<a class="sourceLine" id="cb7-12" data-line-number="12">aos &lt;-<span class="st"> </span><span class="kw">accuracy</span>(<span class="dt">x=</span>predicted, <span class="dt">y=</span>observed)</a>
 <a class="sourceLine" id="cb7-13" data-line-number="13">aos</a></code></pre></div>
 <p>The result from the binary model is displayed. The important values are to keep in mind are the Out Of Bag Error (OOB). This is unique to the model and is a good quick comparison. From the accuracy function we can see our confusion matrix aos$ConfusionMatrix. Most other evaluations are built on this struture so it’s a good one to have at hand.</p>
 <p>To run this model using the continuous data set we need to switch up the structure just a bit.</p>
@@ -445,17 +448,27 @@ $(document).ready(function () {
 <div id="running-the-code-and-interpreting-the-results" class="section level2">
 <h2><span class="header-section-number">1.4</span> Running the Code and Interpreting the Results</h2>
 <p>Now with our response variable and predictor variables established, let’s run the Random Forest model. We’re first going to combine the response variable and predictor variables into the same data frame. Once that is done, we will set up our model and let it run.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="co"># define the response variable</span></a>
-<a class="sourceLine" id="cb8-2" data-line-number="2">responce_var &lt;-<span class="st"> </span>data<span class="op">$</span>Percent_Cov</a>
-<a class="sourceLine" id="cb8-3" data-line-number="3"><span class="co"># define the predictor variables</span></a>
-<a class="sourceLine" id="cb8-4" data-line-number="4">predictor_var &lt;-<span class="st"> </span>predictorVariables</a>
-<a class="sourceLine" id="cb8-5" data-line-number="5"><span class="co"># combine the two to a single data frame</span></a>
-<a class="sourceLine" id="cb8-6" data-line-number="6">dataset &lt;-<span class="st"> </span><span class="kw">cbind</span>(responce_var, predictor_var)</a>
-<a class="sourceLine" id="cb8-7" data-line-number="7"><span class="co"># run the random forest model where the response variable is being predicted # by all other variables within the data frame &quot;dataset&quot;</span></a>
-<a class="sourceLine" id="cb8-8" data-line-number="8">rf_model1 =<span class="st"> </span><span class="kw">randomForest</span>(responce_var <span class="op">~</span><span class="st"> </span>., <span class="dt">data =</span> dataset, <span class="dt">importance =</span> <span class="ot">TRUE</span>)</a>
-<a class="sourceLine" id="cb8-9" data-line-number="9"><span class="co"># print the results of the rf model.</span></a>
-<a class="sourceLine" id="cb8-10" data-line-number="10">rf_model1</a></code></pre></div>
-<p>Much like about there are lots and lots of evaulations that can be performed on the model output. What you choose to due depends strongly on the goals and questions of your study.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="co"># construct a df of predictor and repsponce variables</span></a>
+<a class="sourceLine" id="cb8-2" data-line-number="2">dataset &lt;-<span class="st"> </span>predictorVariables <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb8-3" data-line-number="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">responce_var =</span> data<span class="op">$</span>Percent_Cov)</a>
+<a class="sourceLine" id="cb8-4" data-line-number="4"><span class="co"># run the random forest model where the response variable is being predicted # by all other variables within the data frame &quot;dataset&quot;</span></a>
+<a class="sourceLine" id="cb8-5" data-line-number="5">rf_model1 =<span class="st"> </span><span class="kw">randomForest</span>(responce_var <span class="op">~</span><span class="st"> </span>., <span class="dt">data =</span> dataset, <span class="dt">importance =</span> <span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb8-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb8-7" data-line-number="7"><span class="co"># print the results of the rf model.</span></a>
+<a class="sourceLine" id="cb8-8" data-line-number="8">rf_model1</a>
+<a class="sourceLine" id="cb8-9" data-line-number="9"></a>
+<a class="sourceLine" id="cb8-10" data-line-number="10"><span class="co">#construct a new tbl to plot results </span></a>
+<a class="sourceLine" id="cb8-11" data-line-number="11">var2 &lt;-<span class="st"> </span>dplyr<span class="op">::</span><span class="kw">tbl_df</span>(var1) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb8-12" data-line-number="12"><span class="st">  </span><span class="kw">mutate</span>(rf_model1<span class="op">$</span>y) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-13" data-line-number="13"><span class="st">  </span>dplyr<span class="op">::</span><span class="kw">rename</span>(<span class="dt">predicted =</span> <span class="st">&quot;value&quot;</span>, <span class="dt">actual =</span> <span class="st">'rf_model1$y'</span>)</a>
+<a class="sourceLine" id="cb8-14" data-line-number="14"><span class="co"># define plot </span></a>
+<a class="sourceLine" id="cb8-15" data-line-number="15">plot &lt;-<span class="st"> </span><span class="kw">ggplot</span>(var2, <span class="kw">aes</span>(<span class="dt">x=</span> actual, <span class="dt">y=</span> predicted))</a>
+<a class="sourceLine" id="cb8-16" data-line-number="16"><span class="co"># parameterise the plot and display </span></a>
+<a class="sourceLine" id="cb8-17" data-line-number="17">plot <span class="op">+</span><span class="st"> </span><span class="kw">geom_point</span>(<span class="dt">shape=</span><span class="dv">1</span>)<span class="op">+</span><span class="st">    </span><span class="co"># Use hollow circles</span></a>
+<a class="sourceLine" id="cb8-18" data-line-number="18"><span class="st">    </span><span class="kw">geom_smooth</span>()<span class="op">+</span><span class="st">            </span><span class="co"># Add a loess smoothed fit curve with confidence region</span></a>
+<a class="sourceLine" id="cb8-19" data-line-number="19"><span class="st">    </span><span class="kw">labs</span>(<span class="dt">title=</span><span class="st">&quot;Predicted over Actual&quot;</span>,</a>
+<a class="sourceLine" id="cb8-20" data-line-number="20">        <span class="dt">x =</span><span class="st">&quot;Measure Value&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Predicted Value&quot;</span>)</a></code></pre></div>
+<p>This plots shows the relationship between the predicted and acutal data. The blue line is a best fit trend and the dark gray are is the are of confidence around that trend. It’s easy to see that our model is not really a good representation of the system. This is just one of many evaulations that can be performed on the model output. What you choose to due depends strongly on the goals and questions of your study.</p>
 <p>What should be clear from this is that the process of running the model is not the challenging part. It’s a few lines of code. That said, this only works because the data was prepared for for a very specific purpose. Also just getting the model leaves you with the tasks of interpreting, projecting, and understanding what the results means. Hopefully this will help you spend more time on those interesting questions.</p>
 </div>
 <div id="creating-an-image-output" class="section level2">

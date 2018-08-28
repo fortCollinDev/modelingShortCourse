@@ -12,7 +12,7 @@ output:
     toc: yes
 ---
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(eval = FALSE)
+knitr::opts_chunk$set(eval = FALSE, warning = FALSE, max.rows=10)
 ```
 # Variable Selection
 In the world of ecological systems everything is connected. As a result, there are lots and lots of variables or predictors that can be used to defined any given systes. In a perfect world if we wanted to model ecological conditions we would compile all the factors that influence that system and feed it all into our model. Luckly for us our world is not perfect.
@@ -68,35 +68,34 @@ If your doing this on your own it's import to have some justification to the whi
 ```{r fig.cap = "List of the top ten predictors and there relative importance to the model. These are taken from 125 potential predictors."}
 
 #import Rf utilitties
-install.packages("rfUtilities", "randomForest")
+install.packages("rfUtilities", "randomForest", "dplyr")
 library(rfUtilities)
+library(dplyr)
 ```
 
 ```{r}
-
 # Set random seed
 set.seed(123)
 
 # Create a new data frame with only the raster data
-rastercolumns <- data[, 10:135]
-
+rastercolumns <- data %>% 
+  select(10:135)
 #Run the rf utilities fuction to rank the variable in order of importance
 varimportance_cov <- rf.modelSel(rastercolumns, data$Percent_Cov, imp.scale="se")
-### look up imp.scale="se"
 
 #create a dataframe with the rownames(predictor names) and thier relative importance
 #this willproduce one column of variable names and one column of values
 varimportance_cov <- cbind(rownames(varimportance_cov$sel.importance), varimportance_cov$sel.importance)
-
 # Delete the row names because we've tied them to our dataframe already
 rownames(varimportance_cov) <- NULL
 # define the column names for indexing later
 colnames(varimportance_cov) <- c("name", "importance")
 
 # create a new dataframe where the mostimportant variable is listed at the top
-varimportance_cov_ord <- varimportance_cov[order(-varimportance_cov$imp),]
+varimportance_cov_ord <- varimportance_cov %>%
+  arrange(desc(varimportance_cov$imp))
 # take a look at the top 15 predictor variables
-print(varimportance_cov_ord[1:15,])
+glimpse(varimportance_cov_ord)
 
 ```
 Alright, so we now have a ranked list of variables that is based on the rfUtilities variable selection tool. The variable that have to the highest predictive capabilities are at the top. At this point we have not remove any variable. Before we move on to the next step you should decide how many variables it makes sence to keep. We have a list of the relative importance of all predictor so you can see which ones are really the big players. We would suggest including at the most 15 predictor variables within the next step. In the example below we will just be looking at the top ten.
@@ -114,18 +113,24 @@ library(corrplot)
 ```{r fig.cap = "A correlation plot between the ten top predictors; a Pearsons correlation coefficient of 0.7 was used."}
 
 # drop columns that are not as important based on rfmodelsel
-raster_cov_names <- varimportance_cov_ord$name[1:10]
+raster_cov_names <- varimportance_cov_ord %>%
+  slice(1:10)
 
 #select the predictor variables from the oringinal data set the correspond to the
 # top ten predictors from our variable selection
-rastercolumns_cov <- data[,as.character(raster_cov_names)]
-
+rastercolumns_cov <- rastercolumns %>%
+  select(c(raster_cov_names$name))
 # Calculate correlation coefficient matrix
 correlation <-cor(rastercolumns_cov, method="pearson")
 
 # Plot the correlation. The darker the number,
 # the more correlated the two variables
 corrplot(correlation,method="number")
+
+###
+# see about adapting this to a ggplot2 structure for display #http://www.sthda.com/english/wiki/ggplot2-quick-correlation-matrix-heatmap-r-software-and-data-visualization
+##3
+
 ```
 
 This correlation plot shows how the top ten prediction variables are correlated with one another. We're going to work at removing relationships where variables are correlated at values greater then 70 percent. We will favor the variables that have more predictive power. Below is a step by step process as to how we slimmed down number of variables.
@@ -147,7 +152,8 @@ At this point it becomes difficult to remember which columns have been removed. 
 ```{r fig.cap = "A second correlation plot using a subset of the original top ten predictors. Producing multiple correlation plots is advisable to attempt to decipher large correlation plots."}
 
 # We're using indexing to remove the rows that correspond to the correlated predictor variables
-rastercolumns_cov2 <- rastercolumns[,as.character(raster_cov_names)[-c(5,9,10,6,7)]]
+rastercolumns_cov2 <- rastercolumns_cov %>%
+  select(-5,-9,-10,-6,-7)
 
 # Calculate correlation coefficient matrix
 correlation2 <-cor(rastercolumns_cov2, method="pearson")
@@ -162,7 +168,8 @@ It's good to package this up into a usable dataframe going forward.
 ```{r}
 #create a new dataframe with the presence absence value (named species_PA) and
 # the final predictors that you will using going forward in the modeling process
-selected_binary <- cbind(species_cov = data$Percent_Cov,  rastercolumns_cov2)
+selected_binary <- rastercolumns_cov2 %>%
+  mutate(species_cov = data$Percent_Cov)
 ```
 
 
@@ -173,7 +180,8 @@ The process belows allows you to accomplish the same thing but it's all down wit
 
 ```{r}
 
-rastercolumns_cov <- data[,as.character(raster_cov_names)]
+rastercolumns_cov <- rastercolumns %>%
+  select(c(raster_cov_names$name))
 
 # Calculate correlation coefficient matrix
 correlation <-cor(rastercolumns_cov, method="pearson")

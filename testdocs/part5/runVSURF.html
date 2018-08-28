@@ -404,31 +404,31 @@ $(document).ready(function () {
 <p>We currently have 125 predictor variables available for us within this dataset, which is awesome. On the other hand, we can expect that many of these variables are correlated and that the run time of these models increases with the number of predictor variables. The goal of any model should be to find the right number of variables to describe the system, no more, no less.</p>
 <p>So we’re going to conduct some variable selection to limit down the number of predictors. There are many ways to perform a variable selection. The two below are options that we has tested; <a href="https://www.rdocumentation.org/packages/rfUtilities/versions/2.1-0">RFUtilities</a> and <a href="https://www.rdocumentation.org/packages/VSURF/versions/1.0.3/topics/VSURF">VSURF</a>. Both have their pros and cons. RFutilities is fast and commonly used throughout the literature. VSURF is a more robust process that produced variables that led to higher model predictions in our study. For this example we’re going to use the the variable selection function of rfUtilities. If your doing this on your own it’s import to have some justification to the which selection process you choose. So read up on the process, think about it, read it again, and hopefully something has stuck by then. These functions are not the most intuitive processes so be prepared to spend some time with the documentation if you really need to understand what is happening in the black box.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="co">#import Rf utilitties</span></a>
-<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="kw">install.packages</span>(<span class="st">&quot;rfUtilities&quot;</span>, <span class="st">&quot;randomForest&quot;</span>)</a>
-<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="kw">library</span>(rfUtilities)</a></code></pre></div>
+<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="kw">install.packages</span>(<span class="st">&quot;rfUtilities&quot;</span>, <span class="st">&quot;randomForest&quot;</span>, <span class="st">&quot;dplyr&quot;</span>)</a>
+<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="kw">library</span>(rfUtilities)</a>
+<a class="sourceLine" id="cb4-4" data-line-number="4"><span class="kw">library</span>(dplyr)</a></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="co"># Set random seed</span></a>
 <a class="sourceLine" id="cb5-2" data-line-number="2"><span class="kw">set.seed</span>(<span class="dv">123</span>)</a>
 <a class="sourceLine" id="cb5-3" data-line-number="3"></a>
 <a class="sourceLine" id="cb5-4" data-line-number="4"><span class="co"># Create a new data frame with only the raster data</span></a>
-<a class="sourceLine" id="cb5-5" data-line-number="5">rastercolumns &lt;-<span class="st"> </span>data[, <span class="dv">10</span><span class="op">:</span><span class="dv">135</span>]</a>
-<a class="sourceLine" id="cb5-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb5-5" data-line-number="5">rastercolumns &lt;-<span class="st"> </span>data <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb5-6" data-line-number="6"><span class="st">  </span><span class="kw">select</span>(<span class="dv">10</span><span class="op">:</span><span class="dv">135</span>)</a>
 <a class="sourceLine" id="cb5-7" data-line-number="7"><span class="co">#Run the rf utilities fuction to rank the variable in order of importance</span></a>
 <a class="sourceLine" id="cb5-8" data-line-number="8">varimportance_cov &lt;-<span class="st"> </span><span class="kw">rf.modelSel</span>(rastercolumns, data<span class="op">$</span>Percent_Cov, <span class="dt">imp.scale=</span><span class="st">&quot;se&quot;</span>)</a>
-<a class="sourceLine" id="cb5-9" data-line-number="9">### look up imp.scale=&quot;se&quot;</a>
-<a class="sourceLine" id="cb5-10" data-line-number="10"></a>
-<a class="sourceLine" id="cb5-11" data-line-number="11"><span class="co">#create a dataframe with the rownames(predictor names) and thier relative importance</span></a>
-<a class="sourceLine" id="cb5-12" data-line-number="12"><span class="co">#this willproduce one column of variable names and one column of values</span></a>
-<a class="sourceLine" id="cb5-13" data-line-number="13">varimportance_cov &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="kw">rownames</span>(varimportance_cov<span class="op">$</span>sel.importance), varimportance_cov<span class="op">$</span>sel.importance)</a>
-<a class="sourceLine" id="cb5-14" data-line-number="14"></a>
-<a class="sourceLine" id="cb5-15" data-line-number="15"><span class="co"># Delete the row names because we've tied them to our dataframe already</span></a>
-<a class="sourceLine" id="cb5-16" data-line-number="16"><span class="kw">rownames</span>(varimportance_cov) &lt;-<span class="st"> </span><span class="ot">NULL</span></a>
-<a class="sourceLine" id="cb5-17" data-line-number="17"><span class="co"># define the column names for indexing later</span></a>
-<a class="sourceLine" id="cb5-18" data-line-number="18"><span class="kw">colnames</span>(varimportance_cov) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;name&quot;</span>, <span class="st">&quot;importance&quot;</span>)</a>
-<a class="sourceLine" id="cb5-19" data-line-number="19"></a>
-<a class="sourceLine" id="cb5-20" data-line-number="20"><span class="co"># create a new dataframe where the mostimportant variable is listed at the top</span></a>
-<a class="sourceLine" id="cb5-21" data-line-number="21">varimportance_cov_ord &lt;-<span class="st"> </span>varimportance_cov[<span class="kw">order</span>(<span class="op">-</span>varimportance_cov<span class="op">$</span>imp),]</a>
-<a class="sourceLine" id="cb5-22" data-line-number="22"><span class="co"># take a look at the top 15 predictor variables</span></a>
-<a class="sourceLine" id="cb5-23" data-line-number="23"><span class="kw">print</span>(varimportance_cov_ord[<span class="dv">1</span><span class="op">:</span><span class="dv">15</span>,])</a></code></pre></div>
+<a class="sourceLine" id="cb5-9" data-line-number="9"></a>
+<a class="sourceLine" id="cb5-10" data-line-number="10"><span class="co">#create a dataframe with the rownames(predictor names) and thier relative importance</span></a>
+<a class="sourceLine" id="cb5-11" data-line-number="11"><span class="co">#this willproduce one column of variable names and one column of values</span></a>
+<a class="sourceLine" id="cb5-12" data-line-number="12">varimportance_cov &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="kw">rownames</span>(varimportance_cov<span class="op">$</span>sel.importance), varimportance_cov<span class="op">$</span>sel.importance)</a>
+<a class="sourceLine" id="cb5-13" data-line-number="13"><span class="co"># Delete the row names because we've tied them to our dataframe already</span></a>
+<a class="sourceLine" id="cb5-14" data-line-number="14"><span class="kw">rownames</span>(varimportance_cov) &lt;-<span class="st"> </span><span class="ot">NULL</span></a>
+<a class="sourceLine" id="cb5-15" data-line-number="15"><span class="co"># define the column names for indexing later</span></a>
+<a class="sourceLine" id="cb5-16" data-line-number="16"><span class="kw">colnames</span>(varimportance_cov) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;name&quot;</span>, <span class="st">&quot;importance&quot;</span>)</a>
+<a class="sourceLine" id="cb5-17" data-line-number="17"></a>
+<a class="sourceLine" id="cb5-18" data-line-number="18"><span class="co"># create a new dataframe where the mostimportant variable is listed at the top</span></a>
+<a class="sourceLine" id="cb5-19" data-line-number="19">varimportance_cov_ord &lt;-<span class="st"> </span>varimportance_cov <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-20" data-line-number="20"><span class="st">  </span><span class="kw">arrange</span>(<span class="kw">desc</span>(varimportance_cov<span class="op">$</span>imp))</a>
+<a class="sourceLine" id="cb5-21" data-line-number="21"><span class="co"># take a look at the top 15 predictor variables</span></a>
+<a class="sourceLine" id="cb5-22" data-line-number="22"><span class="kw">glimpse</span>(varimportance_cov_ord)</a></code></pre></div>
 <p>Alright, so we now have a ranked list of variables that is based on the rfUtilities variable selection tool. The variable that have to the highest predictive capabilities are at the top. At this point we have not remove any variable. Before we move on to the next step you should decide how many variables it makes sence to keep. We have a list of the relative importance of all predictor so you can see which ones are really the big players. We would suggest including at the most 15 predictor variables within the next step. In the example below we will just be looking at the top ten.</p>
 </div>
 <div id="removing-correlated-variables" class="section level2">
@@ -437,18 +437,23 @@ $(document).ready(function () {
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="kw">install.packages</span>(<span class="st">'corrplot'</span>)</a>
 <a class="sourceLine" id="cb6-2" data-line-number="2"><span class="kw">library</span>(corrplot)</a></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="co"># drop columns that are not as important based on rfmodelsel</span></a>
-<a class="sourceLine" id="cb7-2" data-line-number="2">raster_cov_names &lt;-<span class="st"> </span>varimportance_cov_ord<span class="op">$</span>name[<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>]</a>
-<a class="sourceLine" id="cb7-3" data-line-number="3"></a>
-<a class="sourceLine" id="cb7-4" data-line-number="4"><span class="co">#select the predictor variables from the oringinal data set the correspond to the</span></a>
-<a class="sourceLine" id="cb7-5" data-line-number="5"><span class="co"># top ten predictors from our variable selection</span></a>
-<a class="sourceLine" id="cb7-6" data-line-number="6">rastercolumns_cov &lt;-<span class="st"> </span>data[,<span class="kw">as.character</span>(raster_cov_names)]</a>
-<a class="sourceLine" id="cb7-7" data-line-number="7"></a>
-<a class="sourceLine" id="cb7-8" data-line-number="8"><span class="co"># Calculate correlation coefficient matrix</span></a>
-<a class="sourceLine" id="cb7-9" data-line-number="9">correlation &lt;-<span class="kw">cor</span>(rastercolumns_cov, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
-<a class="sourceLine" id="cb7-10" data-line-number="10"></a>
-<a class="sourceLine" id="cb7-11" data-line-number="11"><span class="co"># Plot the correlation. The darker the number,</span></a>
-<a class="sourceLine" id="cb7-12" data-line-number="12"><span class="co"># the more correlated the two variables</span></a>
-<a class="sourceLine" id="cb7-13" data-line-number="13"><span class="kw">corrplot</span>(correlation,<span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a></code></pre></div>
+<a class="sourceLine" id="cb7-2" data-line-number="2">raster_cov_names &lt;-<span class="st"> </span>varimportance_cov_ord <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-3" data-line-number="3"><span class="st">  </span><span class="kw">slice</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>)</a>
+<a class="sourceLine" id="cb7-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb7-5" data-line-number="5"><span class="co">#select the predictor variables from the oringinal data set the correspond to the</span></a>
+<a class="sourceLine" id="cb7-6" data-line-number="6"><span class="co"># top ten predictors from our variable selection</span></a>
+<a class="sourceLine" id="cb7-7" data-line-number="7">rastercolumns_cov &lt;-<span class="st"> </span>rastercolumns <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-8" data-line-number="8"><span class="st">  </span><span class="kw">select</span>(<span class="kw">c</span>(raster_cov_names<span class="op">$</span>name))</a>
+<a class="sourceLine" id="cb7-9" data-line-number="9"><span class="co"># Calculate correlation coefficient matrix</span></a>
+<a class="sourceLine" id="cb7-10" data-line-number="10">correlation &lt;-<span class="kw">cor</span>(rastercolumns_cov, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
+<a class="sourceLine" id="cb7-11" data-line-number="11"></a>
+<a class="sourceLine" id="cb7-12" data-line-number="12"><span class="co"># Plot the correlation. The darker the number,</span></a>
+<a class="sourceLine" id="cb7-13" data-line-number="13"><span class="co"># the more correlated the two variables</span></a>
+<a class="sourceLine" id="cb7-14" data-line-number="14"><span class="kw">corrplot</span>(correlation,<span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a>
+<a class="sourceLine" id="cb7-15" data-line-number="15"></a>
+<a class="sourceLine" id="cb7-16" data-line-number="16">###</a>
+<a class="sourceLine" id="cb7-17" data-line-number="17"><span class="co"># see about adapting this to a ggplot2 structure for display #http://www.sthda.com/english/wiki/ggplot2-quick-correlation-matrix-heatmap-r-software-and-data-visualization</span></a>
+<a class="sourceLine" id="cb7-18" data-line-number="18">##3</a></code></pre></div>
 <p>This correlation plot shows how the top ten prediction variables are correlated with one another. We’re going to work at removing relationships where variables are correlated at values greater then 70 percent. We will favor the variables that have more predictive power. Below is a step by step process as to how we slimmed down number of variables.</p>
 <ol style="list-style-type: decimal">
 <li>Start with the first row. Note the position of any variable with &gt;|0.7| correlation
@@ -469,66 +474,69 @@ $(document).ready(function () {
 </ol>
 <p>At this point it becomes difficult to remember which columns have been removed. Let’s rerun our correlation plot removing the correlated indicies we’ve already identified (5,9,10,4,7)</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="co"># We're using indexing to remove the rows that correspond to the correlated predictor variables</span></a>
-<a class="sourceLine" id="cb8-2" data-line-number="2">rastercolumns_cov2 &lt;-<span class="st"> </span>rastercolumns[,<span class="kw">as.character</span>(raster_cov_names)[<span class="op">-</span><span class="kw">c</span>(<span class="dv">5</span>,<span class="dv">9</span>,<span class="dv">10</span>,<span class="dv">6</span>,<span class="dv">7</span>)]]</a>
-<a class="sourceLine" id="cb8-3" data-line-number="3"></a>
-<a class="sourceLine" id="cb8-4" data-line-number="4"><span class="co"># Calculate correlation coefficient matrix</span></a>
-<a class="sourceLine" id="cb8-5" data-line-number="5">correlation2 &lt;-<span class="kw">cor</span>(rastercolumns_cov2, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
-<a class="sourceLine" id="cb8-6" data-line-number="6"></a>
-<a class="sourceLine" id="cb8-7" data-line-number="7"><span class="co"># Plot the correlation. The darker the number, the more correlated the two</span></a>
-<a class="sourceLine" id="cb8-8" data-line-number="8"><span class="co"># variables</span></a>
-<a class="sourceLine" id="cb8-9" data-line-number="9"><span class="kw">corrplot</span>(correlation2, <span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a></code></pre></div>
+<a class="sourceLine" id="cb8-2" data-line-number="2">rastercolumns_cov2 &lt;-<span class="st"> </span>rastercolumns_cov <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-3" data-line-number="3"><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span><span class="dv">5</span>,<span class="op">-</span><span class="dv">9</span>,<span class="op">-</span><span class="dv">10</span>,<span class="op">-</span><span class="dv">6</span>,<span class="op">-</span><span class="dv">7</span>)</a>
+<a class="sourceLine" id="cb8-4" data-line-number="4"></a>
+<a class="sourceLine" id="cb8-5" data-line-number="5"><span class="co"># Calculate correlation coefficient matrix</span></a>
+<a class="sourceLine" id="cb8-6" data-line-number="6">correlation2 &lt;-<span class="kw">cor</span>(rastercolumns_cov2, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
+<a class="sourceLine" id="cb8-7" data-line-number="7"></a>
+<a class="sourceLine" id="cb8-8" data-line-number="8"><span class="co"># Plot the correlation. The darker the number, the more correlated the two</span></a>
+<a class="sourceLine" id="cb8-9" data-line-number="9"><span class="co"># variables</span></a>
+<a class="sourceLine" id="cb8-10" data-line-number="10"><span class="kw">corrplot</span>(correlation2, <span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a></code></pre></div>
 <p>The new correlation plot shows that there are 5 variables that can be used in the model, which are all significant and important. It’s good to package this up into a usable dataframe going forward.</p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" data-line-number="1"><span class="co">#create a new dataframe with the presence absence value (named species_PA) and</span></a>
 <a class="sourceLine" id="cb9-2" data-line-number="2"><span class="co"># the final predictors that you will using going forward in the modeling process</span></a>
-<a class="sourceLine" id="cb9-3" data-line-number="3">selected_binary &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="dt">species_cov =</span> data<span class="op">$</span>Percent_Cov,  rastercolumns_cov2)</a></code></pre></div>
+<a class="sourceLine" id="cb9-3" data-line-number="3">selected_binary &lt;-<span class="st"> </span>rastercolumns_cov2 <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-4" data-line-number="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">species_cov =</span> data<span class="op">$</span>Percent_Cov)</a></code></pre></div>
 <div id="alternative-route" class="section level3">
 <h3><span class="header-section-number">1.4.1</span> Alternative route</h3>
 <p>The example above works well but it’s a little clumsy and takes a bit of pen and paper work to make sure your getting it all right. The process belows allows you to accomplish the same thing but it’s all down within the code editor. Go with whatever method works well for you.</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">rastercolumns_cov &lt;-<span class="st"> </span>data[,<span class="kw">as.character</span>(raster_cov_names)]</a>
-<a class="sourceLine" id="cb10-2" data-line-number="2"></a>
-<a class="sourceLine" id="cb10-3" data-line-number="3"><span class="co"># Calculate correlation coefficient matrix</span></a>
-<a class="sourceLine" id="cb10-4" data-line-number="4">correlation &lt;-<span class="kw">cor</span>(rastercolumns_cov, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
-<a class="sourceLine" id="cb10-5" data-line-number="5"></a>
-<a class="sourceLine" id="cb10-6" data-line-number="6"><span class="co"># Plot the correlation. The darker the number,</span></a>
-<a class="sourceLine" id="cb10-7" data-line-number="7"><span class="co"># the more correlated the two variables</span></a>
-<a class="sourceLine" id="cb10-8" data-line-number="8"><span class="kw">corrplot</span>(correlation,<span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a>
-<a class="sourceLine" id="cb10-9" data-line-number="9"></a>
-<a class="sourceLine" id="cb10-10" data-line-number="10"><span class="co"># the read line funtion will show up in your code editors console. You will have to type the numbers in there following the specific format defined below.</span></a>
-<a class="sourceLine" id="cb10-11" data-line-number="11">x1 &lt;-<span class="st"> </span><span class="kw">readline</span>(<span class="st">&quot;Enter the numbers that you would like to remove seperated by commas. eg (4,25,3)&quot;</span>)</a>
-<a class="sourceLine" id="cb10-12" data-line-number="12">x1 &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">unlist</span>(<span class="kw">strsplit</span>(x1, <span class="st">&quot;,&quot;</span>)))</a>
-<a class="sourceLine" id="cb10-13" data-line-number="13"></a>
-<a class="sourceLine" id="cb10-14" data-line-number="14">select_var1 &lt;-<span class="st"> </span>rastercolumns_cov[,<span class="op">-</span><span class="kw">c</span>(x1)]</a>
-<a class="sourceLine" id="cb10-15" data-line-number="15"></a>
-<a class="sourceLine" id="cb10-16" data-line-number="16">correlation &lt;-<span class="kw">cor</span>(select_var1, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
-<a class="sourceLine" id="cb10-17" data-line-number="17"><span class="kw">corrplot</span>(correlation,<span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a>
-<a class="sourceLine" id="cb10-18" data-line-number="18"></a>
-<a class="sourceLine" id="cb10-19" data-line-number="19">x2 &lt;-<span class="st"> </span><span class="kw">readline</span>(<span class="st">&quot;Enter the numbers that you would like to remove seperated by commas. eg (4,25,3).&quot;</span>)</a>
-<a class="sourceLine" id="cb10-20" data-line-number="20">x2 &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">unlist</span>(<span class="kw">strsplit</span>(x2, <span class="st">&quot;,&quot;</span>)))</a>
-<a class="sourceLine" id="cb10-21" data-line-number="21"></a>
-<a class="sourceLine" id="cb10-22" data-line-number="22">select_var2 &lt;-<span class="st"> </span>select_var1[,<span class="op">-</span><span class="kw">c</span>(x2)]</a>
-<a class="sourceLine" id="cb10-23" data-line-number="23"></a>
-<a class="sourceLine" id="cb10-24" data-line-number="24">correlation &lt;-<span class="kw">cor</span>(select_var2, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
-<a class="sourceLine" id="cb10-25" data-line-number="25"><span class="kw">corrplot</span>(correlation,<span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a>
-<a class="sourceLine" id="cb10-26" data-line-number="26"></a>
-<a class="sourceLine" id="cb10-27" data-line-number="27"><span class="co">#If you do not need to remove values at this point just alter your code at the</span></a>
-<a class="sourceLine" id="cb10-28" data-line-number="28"><span class="co"># bottom to only include the selected variables you want.</span></a>
-<a class="sourceLine" id="cb10-29" data-line-number="29">### examples</a>
-<a class="sourceLine" id="cb10-30" data-line-number="30"><span class="co">#  selected_binary &lt;- cbind(species_PA = Data$PresenceAb,  select_var1)</span></a>
-<a class="sourceLine" id="cb10-31" data-line-number="31"><span class="co">#  selected_binary &lt;- cbind(species_PA = Data$PresenceAb,  select_var2)</span></a>
-<a class="sourceLine" id="cb10-32" data-line-number="32"><span class="co">#  selected_binary &lt;- cbind(species_PA = Data$PresenceAb,  select_var3)</span></a>
-<a class="sourceLine" id="cb10-33" data-line-number="33">###</a>
-<a class="sourceLine" id="cb10-34" data-line-number="34"><span class="co"># Likewise you can add more steps to this process by repeating this process</span></a>
-<a class="sourceLine" id="cb10-35" data-line-number="35"></a>
-<a class="sourceLine" id="cb10-36" data-line-number="36">x3 &lt;-<span class="st"> </span><span class="kw">readline</span>(<span class="st">&quot;Enter the numbers that you would like to remove seperated by commas. eg (4,25,3).&quot;</span>)</a>
-<a class="sourceLine" id="cb10-37" data-line-number="37">x3 &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">unlist</span>(<span class="kw">strsplit</span>(x3, <span class="st">&quot;,&quot;</span>)))</a>
-<a class="sourceLine" id="cb10-38" data-line-number="38"></a>
-<a class="sourceLine" id="cb10-39" data-line-number="39">select_var3 &lt;-<span class="st"> </span>select_var2[,<span class="op">-</span><span class="kw">c</span>(x3)]</a>
-<a class="sourceLine" id="cb10-40" data-line-number="40"></a>
-<a class="sourceLine" id="cb10-41" data-line-number="41">correlation &lt;-<span class="kw">cor</span>(select_var3, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
-<a class="sourceLine" id="cb10-42" data-line-number="42"><span class="kw">corrplot</span>(correlation,<span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a>
-<a class="sourceLine" id="cb10-43" data-line-number="43"></a>
-<a class="sourceLine" id="cb10-44" data-line-number="44"><span class="co">#at this point there are 8 variables that are not correlated binded them to the binary indence and put into rf model</span></a>
-<a class="sourceLine" id="cb10-45" data-line-number="45">selected_binary &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="dt">species_PA =</span> data<span class="op">$</span>Percent_Cov,  select_var1)</a></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">rastercolumns_cov &lt;-<span class="st"> </span>rastercolumns <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-2" data-line-number="2"><span class="st">  </span><span class="kw">select</span>(<span class="kw">c</span>(raster_cov_names<span class="op">$</span>name))</a>
+<a class="sourceLine" id="cb10-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb10-4" data-line-number="4"><span class="co"># Calculate correlation coefficient matrix</span></a>
+<a class="sourceLine" id="cb10-5" data-line-number="5">correlation &lt;-<span class="kw">cor</span>(rastercolumns_cov, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
+<a class="sourceLine" id="cb10-6" data-line-number="6"></a>
+<a class="sourceLine" id="cb10-7" data-line-number="7"><span class="co"># Plot the correlation. The darker the number,</span></a>
+<a class="sourceLine" id="cb10-8" data-line-number="8"><span class="co"># the more correlated the two variables</span></a>
+<a class="sourceLine" id="cb10-9" data-line-number="9"><span class="kw">corrplot</span>(correlation,<span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a>
+<a class="sourceLine" id="cb10-10" data-line-number="10"></a>
+<a class="sourceLine" id="cb10-11" data-line-number="11"><span class="co"># the read line funtion will show up in your code editors console. You will have to type the numbers in there following the specific format defined below.</span></a>
+<a class="sourceLine" id="cb10-12" data-line-number="12">x1 &lt;-<span class="st"> </span><span class="kw">readline</span>(<span class="st">&quot;Enter the numbers that you would like to remove seperated by commas. eg (4,25,3)&quot;</span>)</a>
+<a class="sourceLine" id="cb10-13" data-line-number="13">x1 &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">unlist</span>(<span class="kw">strsplit</span>(x1, <span class="st">&quot;,&quot;</span>)))</a>
+<a class="sourceLine" id="cb10-14" data-line-number="14"></a>
+<a class="sourceLine" id="cb10-15" data-line-number="15">select_var1 &lt;-<span class="st"> </span>rastercolumns_cov[,<span class="op">-</span><span class="kw">c</span>(x1)]</a>
+<a class="sourceLine" id="cb10-16" data-line-number="16"></a>
+<a class="sourceLine" id="cb10-17" data-line-number="17">correlation &lt;-<span class="kw">cor</span>(select_var1, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
+<a class="sourceLine" id="cb10-18" data-line-number="18"><span class="kw">corrplot</span>(correlation,<span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a>
+<a class="sourceLine" id="cb10-19" data-line-number="19"></a>
+<a class="sourceLine" id="cb10-20" data-line-number="20">x2 &lt;-<span class="st"> </span><span class="kw">readline</span>(<span class="st">&quot;Enter the numbers that you would like to remove seperated by commas. eg (4,25,3).&quot;</span>)</a>
+<a class="sourceLine" id="cb10-21" data-line-number="21">x2 &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">unlist</span>(<span class="kw">strsplit</span>(x2, <span class="st">&quot;,&quot;</span>)))</a>
+<a class="sourceLine" id="cb10-22" data-line-number="22"></a>
+<a class="sourceLine" id="cb10-23" data-line-number="23">select_var2 &lt;-<span class="st"> </span>select_var1[,<span class="op">-</span><span class="kw">c</span>(x2)]</a>
+<a class="sourceLine" id="cb10-24" data-line-number="24"></a>
+<a class="sourceLine" id="cb10-25" data-line-number="25">correlation &lt;-<span class="kw">cor</span>(select_var2, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
+<a class="sourceLine" id="cb10-26" data-line-number="26"><span class="kw">corrplot</span>(correlation,<span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a>
+<a class="sourceLine" id="cb10-27" data-line-number="27"></a>
+<a class="sourceLine" id="cb10-28" data-line-number="28"><span class="co">#If you do not need to remove values at this point just alter your code at the</span></a>
+<a class="sourceLine" id="cb10-29" data-line-number="29"><span class="co"># bottom to only include the selected variables you want.</span></a>
+<a class="sourceLine" id="cb10-30" data-line-number="30">### examples</a>
+<a class="sourceLine" id="cb10-31" data-line-number="31"><span class="co">#  selected_binary &lt;- cbind(species_PA = Data$PresenceAb,  select_var1)</span></a>
+<a class="sourceLine" id="cb10-32" data-line-number="32"><span class="co">#  selected_binary &lt;- cbind(species_PA = Data$PresenceAb,  select_var2)</span></a>
+<a class="sourceLine" id="cb10-33" data-line-number="33"><span class="co">#  selected_binary &lt;- cbind(species_PA = Data$PresenceAb,  select_var3)</span></a>
+<a class="sourceLine" id="cb10-34" data-line-number="34">###</a>
+<a class="sourceLine" id="cb10-35" data-line-number="35"><span class="co"># Likewise you can add more steps to this process by repeating this process</span></a>
+<a class="sourceLine" id="cb10-36" data-line-number="36"></a>
+<a class="sourceLine" id="cb10-37" data-line-number="37">x3 &lt;-<span class="st"> </span><span class="kw">readline</span>(<span class="st">&quot;Enter the numbers that you would like to remove seperated by commas. eg (4,25,3).&quot;</span>)</a>
+<a class="sourceLine" id="cb10-38" data-line-number="38">x3 &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(<span class="kw">unlist</span>(<span class="kw">strsplit</span>(x3, <span class="st">&quot;,&quot;</span>)))</a>
+<a class="sourceLine" id="cb10-39" data-line-number="39"></a>
+<a class="sourceLine" id="cb10-40" data-line-number="40">select_var3 &lt;-<span class="st"> </span>select_var2[,<span class="op">-</span><span class="kw">c</span>(x3)]</a>
+<a class="sourceLine" id="cb10-41" data-line-number="41"></a>
+<a class="sourceLine" id="cb10-42" data-line-number="42">correlation &lt;-<span class="kw">cor</span>(select_var3, <span class="dt">method=</span><span class="st">&quot;pearson&quot;</span>)</a>
+<a class="sourceLine" id="cb10-43" data-line-number="43"><span class="kw">corrplot</span>(correlation,<span class="dt">method=</span><span class="st">&quot;number&quot;</span>)</a>
+<a class="sourceLine" id="cb10-44" data-line-number="44"></a>
+<a class="sourceLine" id="cb10-45" data-line-number="45"><span class="co">#at this point there are 8 variables that are not correlated binded them to the binary indence and put into rf model</span></a>
+<a class="sourceLine" id="cb10-46" data-line-number="46">selected_binary &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="dt">species_PA =</span> data<span class="op">$</span>Percent_Cov,  select_var1)</a></code></pre></div>
 </div>
 </div>
 <div id="wrapping-it-up" class="section level2">
