@@ -60,10 +60,10 @@ Once you complete the geometry feature by placing a point on the starting locati
 
 ## Loading In NAIP Imagery
 
-We started with the plan to sample from the year 2015. However since we used GEE we gave ourselves a few more options. The code below allows you to call in the imagery and filter it for both 2015 and 2016. This is helpfull because NAIP is not collected every year. 
+We started with the plan to sample from the year 2015. However since we used GEE we gave ourselves a few more options. The code below allows you to call in the imagery and filter it for both 2015 and 2016. This is helpfull because NAIP is not collected every year.
 
-```javascript 
-// call in NAIP imagery as an image collection 
+```javascript
+// call in NAIP imagery as an image collection
 var NAIP = ee.ImageCollection("USDA/NAIP/DOQQ")
 
 // filter the data based on date and area for 2015
@@ -74,17 +74,17 @@ var naip2015 = NAIP
 var naip2016 = NAIP
   .filterBounds(geometry)
   .filterDate("2016-01-01", "2016-12-31")
-    
+
 ```  
 
 ## Adding images to the map
 
-Now that we've loaded the imagery we want to visulize it on the map. NAIP imagery is collected as a series of images. Therefore we need to create a multispectral image by defines what bands we want to use. We do this by setting visulization parameters. Once those are defined we can add the images to the map. 
-In this case we're going to add true color and color composites for both 2015 and 2016 because we don't really know when the imagery was captured for your area of interest. 
+Now that we've loaded the imagery we want to visulize it on the map. NAIP imagery is collected as a series of images. Therefore we need to create a multispectral image by defines what bands we want to use. We do this by setting visulization parameters. Once those are defined we can add the images to the map.
+In this case we're going to add true color and color composites for both 2015 and 2016 because we don't really know when the imagery was captured for your area of interest.
 
-```javascript 
+```javascript
 
-//define viewing parameters for multi band images 
+//define viewing parameters for multi band images
 var visParams = {bands:['N', 'R', 'G']}
 var visParams1 = {bands:['R', 'G', 'B']}
 
@@ -96,7 +96,7 @@ Map.addLayer(naip2015,visParams1,"2015_true",false )
 Map.addLayer(naip2016,visParams,"2016_false",false )
 Map.addLayer(naip2016,visParams1,"2016_true",false )
 
-``` 
+```
 
 ![trueColor](trueColor.png)
 <br>
@@ -105,15 +105,15 @@ Map.addLayer(naip2016,visParams1,"2016_true",false )
 <br>
 
 ## Adding Presence and Absence Locations
-Adding in presence and absence layers is a rather straightforward process done by creating a geometry features and placing them on representative locations on the map. 
+Adding in presence and absence layers is a rather straightforward process done by creating a geometry features and placing them on representative locations on the map.
 
-- Let's select the import geometry box and click create new. 
+- Let's select the import geometry box and click create new.
 
 - A geometry feature should be added below your geometry feature that is functioning as your area of interest.
 
-- Select the gear icon next to the text. 
+- Select the gear icon next to the text.
 
-- A pop up will open. Change the 'import as' type to 'FeatureCollection' and then press the 'add Property button' 
+- A pop up will open. Change the 'import as' type to 'FeatureCollection' and then press the 'add Property button'
 
 - fill in the boxes with 'presence' | 1 - change the featurecollection name to presence and select a color you enjoy Repeat this process, creating a absence featurecollection where the add property looks as follows 'presence' | 0
 
@@ -130,7 +130,7 @@ Adding in presence and absence layers is a rather straightforward process done b
 
 
 Once the points are created we can sample by selecting the specific feature collection (presence or absence) and use the marker tool to drop points on the imagery.
-The sampling methodologies you use will depend on your study. In this example green presence points represent deciduous forest and red point are not deciduous forest. 
+The sampling methodologies you use will depend on your study. In this example green presence points represent deciduous forest and red point are not deciduous forest.
 
 <br>
 <br>
@@ -140,7 +140,7 @@ The sampling methodologies you use will depend on your study. In this example gr
 <br>
 <br>
 
-Above is a true color image 
+Above is a true color image
 Below is a false color image
 
 ![sampling example false](pointsFalse.png)
@@ -149,22 +149,24 @@ Below is a false color image
 <br>
 
 ## Exporting points
+Currently our point locations are store in two different features classes. Let's merge these features before we export the data so we are only working with a single file.
+<br>
+```javascript
+var samples = Presence.merge(Absence)
+print(samples, 'Samples');
+```
+<br>
+<br>
 
-Once you've completed sampling you can export your feature collections. This is another section of code. When you run the code the Taskbar in the upper right hand side of the console will light up. The task needs to be run to actually execute the export. 
+Now that the sampling features classes are merged lets export the features to the our drive. When you run the code the "Task" bar in the upper right hand side of the console will light up. GEE do not run tasks without your telling it to execute from the task bar The task needs to be run to actually execute the export. 
 <br>
 ```javascript
 //export presence points
 Export.table.toDrive({
-  collection: presence,
-  description:'presencePointsForForest',
+  collection: samples,
+  description:'presenceAbsencePointsForForest',
   fileFormat: 'csv'
-});
-// export the absence points
-Export.table.toDrive({
-  collection: absence,
-  description:'absencePointsForForest',
-  fileFormat: 'csv'
-});
+})
 ```
 <br>
-Moving material in and out of GEE can be a real challange. While this does produce a csv it is still take some time and effort to make match the format you might be expecting. The best advice I have to to work with the data in GEE for as long as you can before exporting. 
+Moving material in and out of GEE can be a real challenge. While this does produce a csv it is still take some time and effort to make match the format you might be expecting. The best advice I have to to work with the data in GEE for as long as you can before exporting.
