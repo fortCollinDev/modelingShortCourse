@@ -1,0 +1,102 @@
+---
+title: summary of maxent modeling 
+author: Daniel Carver
+output:
+  html_document:
+    code_folding: hide
+    highlight: tango
+    theme: yeti
+    toc: yes
+    toc_depth: 2
+    toc_float:
+      collapsed: no
+      smooth_scroll: no
+---
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+library(knitr)
+library(markdown)
+library(rmarkdown)
+library("tmap")
+library("raster")
+library("DT")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# function for flitering list based on character values 
+include <- function (theList, toMatch){
+  matches <- unique (grep(paste(toMatch,collapse="|"), 
+                          theList, value=TRUE))
+  return(matches)
+}
+# taxa <- "Cucurbita_pepo_subsp._ovifera_var._ozarkana"
+# run<- "biome"
+```
+
+## Summary of the models for `r taxa` with a native area boundary of `r run`. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# taxa is the 
+baseDir <- paste0(base_dr, '/', taxa,'/',run)
+csv <- list.files(baseDir, pattern = ".csv", recursive = TRUE , full.names = TRUE)
+
+```
+
+### Evaluation metrics 
+
+The modeling process was ran 5 time to attempt to account for random variation that is a potential with this type of model. The table below show that statistical results of the 5 runs. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# evalMetric <- include(csvs,"eval_metrics_rep.csv")
+DT::datatable(read.csv(include(csv,"eval_metrics_rep.csv")))
+```
+
+For summary the medain run results is defined here. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# evalMetric <- include(csvs,"eval_metrics_rep.csv")
+DT::datatable(read.csv(include(csv,"eval_metrics.csv")))
+```
+
+### Conservation 
+
+The table below show that exsitu conservation summary 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# exSummary <- include(csv, "exsitu/summary.csv")
+DT::datatable(read.csv(include(csv, "exsitu/summary.csv")))
+```
+
+
+The table below show that insitu conservation summary 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# inSummary <- include(csv, "insitu/summary.csv")
+DT::datatable(read.csv(include(csv, "insitu/summary.csv")))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+tif <- list.files(path = baseDir, pattern = '.tif', recursive = TRUE, full.names = TRUE)
+median <- raster(include(tif, "spdist_median"))
+thrshold <- raster(include(tif, "spdist_thrsld"))
+sd <- raster(include(tif, "spdist_sd"))
+tmap_mode("view")
+
+```
+### Maps of model outputs. 
+
+Map of the median results from maxent models
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+qtm(shp = median)
+```
+
+Map of the standard devation results from maxent models
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+qtm(shp = sd)
+```
+
+Map of the threshold results from maxent models
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+qtm(shp = thrshold)
+```

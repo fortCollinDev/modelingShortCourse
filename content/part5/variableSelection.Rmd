@@ -1,0 +1,266 @@
+---
+title: "Variable Selection Using the rfUtiltities Package in R"
+author: "Dan Carver & Megs Seeley"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    highlight: tango
+    number_sections: yes
+    theme: journal
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE, warning = FALSE, max.rows=10)
+```
+# Variable Selection
+In the world of ecological systems, everything is connected. As a result, many of our predictor variables may be predictive of, or correlated to, other predictors. When we include correlated predictors in a model, it is similar to including the same predictor twice. As a result, we run the risk of overemphasizing certain predictors.
+
+The **principle of parsimony** allows us to circumvent the issue of correlation in our predictor dataset. This principle states that the best model is the one that explains the system with the fewest predictors. Reducing the set of predictors introduces assumptions and biases into the modelling process. We will often select variables based on knowledge of the system -- what set of variables predicts or best classifies our dependent variable? The goal is to remove highly correlated predictors and keep only the predictors that add novel information with regards to the spatial distribution of our predicted variable. Sometimes this prior knowledge of the system are not well known. In these cases, we can use predefined algorithms to determine which variables will be the most important. In this tutorial, we will outline a method that will give your work credibility when you do not have prior knowledge to help select your predictors.
+
+Note that recursive models such as Random Forest handle correlated predictor variables rather well. Even when employing recursive models, it is still good practice to reduce the number of correlated variables.
+
+
+To streamline the R component of this tutorial, we have created an R environment in Jupyter Notebook with all the required packages. You can access this notebook [here](https://mybinder.org/v2/gh/fortCollinDev/sadWorkshopR/master).
+<br>
+Open the 'Working Notebook -- SAD Workshop' notebook.
+
+
+## Setting the Stage
+Let's get started by importing all the R packages we will use in this tutorial.
+
+If you are working in Jupyter environment, note that the necessary libraries are included have been installed. If you were to repeat these methods using R Studio, you would first need to import the following packages using 'install.packages()'
+
+
+```{r}
+# Use library() to import the following R packages: dplyr, corrplot, and rfUtilities
+library(dplyr)
+library(corrplot)
+library(rfUtilities)
+
+```
+
+## Importing the Data
+Next, we will import the data we exported from Google Earth Engine. The Jupyter notebook already has these data. 
+<br>
+If you are working in R Studio, you will need to navigate to the folder in which the data is located using  'setwd("filePath")'. You can do this manually using the toolbar (Session ??? Set Working Directory ??? Choose Directory).
+
+
+```{r}
+# Import csv as a data frame
+data = read.csv('data/Predictor_Points.csv')
+
+# Print the data dimensions
+data_dim = dim(data)
+print(paste("This data frame consists of ",data_dim[1]," rows and ",data_dim[2]," columns."))
+```
+
+This spreadsheet contains quite a bit of data. Instead of printing the entire spreadsheet to our console, we can explore the a subset of the data using the code below.
+
+```{r}
+
+head(data)
+colnames(data)
+
+```
+
+Remember that these data include whether aspen is present or absent ('presence' column) and the remotely sensed reflectance values for those locations. The presence column is represented by a binary. 
+<br>Aspen present: 1 
+<br>Aspen absent: 0.
+
+## Variable Selection Process
+Currently, there are nine predictor variables in this dataset. To adhere to the principle of parsimony, we will need to remove most of these predictors. The methodology described here is a two-step process: 
+
+1. Rank reflectance values based on their correlation to aspen presence
+2. Remove correlated variables within the refined predictor dataset
+
+The goal of any model should be to find the right number of variables to describe the system, no more, no less.
+
+There are many algorithms that rank predictors based on their correlation to the dependant variable. The two R packages discussed below include algorithms that we have tested.
+<br>
+<br>
+[rfUtilities](https://www.rdocumentation.org/packages/rfUtilities/versions/2.1-0)
+<br>
+[VSURF](https://www.rdocumentation.org/packages/VSURF/versions/1.0.3/topics/VSURF)
+<br>
+<br>
+rfUtilities is fast and commonly used throughout the literature. VSURF more robust and selected variables that led to higher model predictions in our study.
+<br>
+In this tutorial, we will use rfUtilities.
+When replicating this process in the future, remember that it is important to justify your decision regarding the selection process you choose. These functions are not the most intuitive, so be prepared to spend some time with the documentation to understand what is happening in the black boxes.   
+
+```{r}
+# Set a random seed
+set.seed(123)
+
+
+
+## Create a new data frame with only independent variables
+varData = data[2:11]
+
+# Converting 'presence' to a factor ensure that a binary classifier is used rather then a regression in the variable selection process.
+presenceData <- as.factor(varData$presence)  
+ 
+# Remove presence from varData
+varData = within(varData, rm(presence))
+
+head(varData)
+
+# Run rfUtilites to rank variables in order of importance
+varImportance_cov = rf.modelSel(varData, data$presence, imp.scale = 'se')
+
+# Create data frame from rfUtilites results
+varImportance_cov = cbind(rownames(varImportance_cov$importance),
+                          varImportance_cov$importance)
+
+# Rename row names
+rownames(varImportance_cov) = NULL
+colnames(varImportance_cov) = c("name", "importance")
+
+# Order the dataframe by variable importance
+varImportance_cov_ord <- varImportance_cov %>%
+  arrange(desc(varImportance_cov$importance))
+
+# Inspect the results
+varImportance_cov_ord
+
+```
+
+Now have a ranked list of predictors based on the rfUtilities package. The predictor with the greatest predictive capabilities is listed first. At this point we have not removed any predictors. Before moving to the next step, we must decide how many predictors to keep. Since we have only nine predictors, we will not remove any. Should you decide to keep only the top ten predictors, we included code that will allow you to do so. 
+
+## Removing Correlated Variables
+We will identify and remove highly correlated variables inspecting a correlation matrix. As mentioned earlier, the decision process is ideally this decision process is informed by both prior knowledge of the system and correlation values. With that said, we will proceed as if that prior knowledge does not exist. 
+
+```{r fig.cap = "A correlation plot between the ten top predictors"}
+
+# First narrow down your potential predictors based on rfUtilities
+varData_imp <- varImportance_cov_ord %>%
+  slice(1:10)
+
+# Select those variables from original dataset
+varData_imp_values <- varData %>%
+  select(c(varData_imp$name))
+
+# Reorder columns according to importance
+order = varImportance_cov_ord[,1]
+stringOrder = c()
+for (i in 1:length(order)){
+  value = toString(order[i])
+  stringOrder[[i]]=value
+}
+
+varData_imp_values_ord = varData_imp_values[stringOrder]
+
+# Calculate correlation coefficient matrix using the corrplot package
+correlation <-cor(varData_imp_values_ord, method="spearman")
+
+# Plot the correlation matrix
+corrplot(correlation,method="number", col='black')
+
+```
+
+The correlation plot displays correlation among our predictors with the top-ranked predictors listed in the upper left corner. We will remove predictors highly correlated with predictors of greater importance according to the rfUtilites. Here we define high correlation where the absolute value is greater than 0.80. Below we describe our step-by-step process for removing variables. 
+
+1. Row 1: Green
+    + Note variables with >|0.8| correlation
+    + Remove TCB, blue, red, swir1, and swir2
+2. Row 2: NIR
+    + Note variables with >|0.8| correlation
+    + No 'high' correlations present
+3. Row 3: TCB
+    + Skip because we removed TCB in Step 1
+4. Row 4: NDVI
+    + Note variables with >|0.8| correlation
+    + Remove NDWI
+5. There are no more variables to investigate
+
+
+## Reassessing your correlation matrix
+
+Now that we have refined our variables, let's replot the matrix with our new set of predictors. This will serve as a final check prior to using these variables in our random forest model.
+
+```{r fig.cap = "A correlation plot between the final predictors"}
+
+# Create data table with only final predictors
+keep_predictors = c('green', 'nir', 'ndvi')
+final_predictors = varData_imp_values_ord[keep_predictors]
+
+# Calculate correlation coefficient matrix using the corrplot package
+correlation2 <-cor(final_predictors, method="spearman")
+
+# Plot the correlation matrix
+corrplot(correlation2,method="number", col='black')
+
+```
+
+## Wrapping It Up
+Variable selection is an important step in any modelling process. While computers seem to eliminate gray areas and biases, you should always question your results and use your best judgement. These tools can provide justification for your results, but they should never be the sole deciding factor in your variable selection process. 
+
+
+
+## Final complete code for lesson
+
+```{r, fig.cap = "final code"}
+# Use library() to import the following R packages: dplyr, corrplot, and rfUtilities
+library(dplyr)
+library(corrplot)
+library(rfUtilities)
+
+# Import csv as a data frame
+data = read.csv('data/Predictor_Points.csv')
+
+# Print the data dimensions
+data_dim = dim(data)
+print(paste("This data frame consists of ",data_dim[1]," rows and ",data_dim[2]," columns."))
+
+head(data)
+colnames(data)
+
+# Set a random seed
+set.seed(123)
+
+## Create a new data frame with only independent variables
+varData = data[2:11]
+
+# Converting 'presence' to a factor ensure that a binary classifier is used rather then a regression in the variable selection process.
+presenceData <- as.factor(varData$presence)  
+ 
+# Remove presence from varData
+varData = within(varData, rm(presence))
+
+head(varData)
+
+# Run rfUtilites to rank variables in order of importance
+varImportance_cov = rf.modelSel(varData, data$presence, imp.scale = 'se')
+
+# Create data frame from rfUtilites results
+varImportance_cov = cbind(rownames(varImportance_cov$importance),
+                          varImportance_cov$importance)
+
+# Rename row names
+rownames(varImportance_cov) = NULL
+colnames(varImportance_cov) = c("name", "importance")
+
+# Order the dataframe by variable importance
+varImportance_cov_ord <- varImportance_cov %>%
+  arrange(desc(varImportance_cov$importance))
+
+# Inspect the results
+varImportance_cov_ord
+# Calculate correlation coefficient matrix using the corrplot package
+correlation <-cor(varData_imp_values_ord, method="spearman")
+
+# Plot the correlation matrix
+corrplot(correlation,method="number", col='black')
+
+# Create data table with only final predictors
+keep_predictors = c('green', 'nir', 'ndvi')
+final_predictors = varData_imp_values_ord[keep_predictors]
+
+# Calculate correlation coefficient matrix using the corrplot package
+correlation2 <-cor(final_predictors, method="spearman")
+
+# Plot the correlation matrix
+corrplot(correlation2,method="number", col='black')
+```

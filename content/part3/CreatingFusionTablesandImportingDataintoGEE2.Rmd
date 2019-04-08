@@ -1,7 +1,7 @@
 ---
-title: "Creating Fusion Tables and Importing Data into Google Earth Engine"
+title: "Data Introperability in GEE"
 author: "Kaitlin Walker (adapted from Jillian LaRoe and Julia Sullivan)"
-date: "April 8, 2018"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
     highlight: tango
@@ -12,14 +12,31 @@ output:
     toc: yes
 ---
 
-# Creating a Fusion Table
+# The in and out
 
-In this excercise, we will learn how to import a data file into Google Earth Engine (GEE) Code Editor. This is essential if you want to use point or location data in GEE.  
+In this excercise, we will discuss some of the options for moving data in and out of the Google Earth Engine (GEE) Code Editor. The processes surrounding this have been changing rapidly and as with most things it's best to go directly to the docs. That information can be found [here](https://developers.google.com/earth-engine/importing)
 
-## Shapefile to Fusion Table
-First, it is important to note that the projection that GEE uses is **WGS 1984 Web Auxiliary Sphere**. Thus, shapefiles must first be projected to **WGS 1984** before importing into GEE.
+As we will move vector data in and out of GEE for this lesson, we will briefly cover one method of importing and exporting data below. 
 
-A Fusion Table is Google's version of a spreadsheet, or data organized as a table. GEE uses Fusion Tables, so data must be converted to a Fusion Table before it is usable. A convenient way to convert from a shapefile to a Fusion Table is by using the website **"Shape Escape"**: [shpescape.com](shpescape.com). In the steps below, we walk through this process.
+## Coordinate Reference System 
+First, it is important to note that the projection that GEE uses is **WGS 1984** EPSG:4326. Thus, all data needs to be imported with that same coordinate reference system. Some platforms might need more specific information. In the past we've had to use  **WGS 1984 Web Auxiliary Sphere**. In general you should be fine working with unproject data in the WGS1984 geographic coordinate system. 
+
+## Exporting out of GEE
+There are multiple options to export data from GEE. Unlike nearly everyother process in GEE, exporting and importing data is slow. Expect small vector and tabular data to take multiple minutes. Large raster datasets can take hours and require a bit more tinkering on your end. We will not get into those details here. 
+
+
+![export options](exportOptions2.png)
+
+You can export your feature to what ever datatype you desire.
+Exporting data as a .shp was added in 2018. 
+
+QGIS provides the option to load KML, KMZ, geoJson, and SHP, so visualizing and working with the data in a desktop GIS is a readily available option. 
+
+## Fusion Tables 
+Come December 2019 Fusion Tables will no longer be support by Google. While the end of the line is forseeable for this datatype they do intergrate with GEE very well and will will be using them within this process.
+
+A convenient way to convert from a shapefile to a Fusion Table is by using the website **"Shape Escape"**: [shpescape.com](shpescape.com). In the steps below, we walk through this process.
+
 
 1. Copy all associated files (".shp" ".shx" ".dbf" and ".prj") to a new folder on your computer, and zip the folder.
 2. Go to shpescape.com. Choose the "shp 2 fusion tables" option.  
@@ -37,25 +54,31 @@ The following steps walk through how to convert CSV or KML data to a Fusion Tabl
 
 
 ## Importing a Fusion Table into Google Earth Engine
-Once you have created your fusion table, open it. Fusion Tables are stored on your Google Drive, and can be opened by right-clicking the file in your drive. Then, you can select Open with > Fusion Tables.
+Once you have created your fusion table, open it. Fusion Tables are stored on your Google Drive, and can be opened by right-clicking the file in your drive. Then, you can select **Open with > Fusion Tables**.
 
-When you have pulled up your table, click the File tab, then the **About this Table** option. A new window will open which includes information such as the table ID. This is a specific ID that you can share with people or link in a GEE script in order to call upon this specific table. Copy this ID (highlight and right click to copy.)  
+When you have opened your table, click the File tab, then the **About this Table** option. A new window will open which includes information such as the table ID. This is a specific ID that you can share with people or link in a GEE script in order to call upon this specific table. Copy this ID (highlight and right click to copy.)  
+
 ![About This Table.](Aboutthistable.JPG)
 
 Next, go to your GEE script. Once here, you can paste in the table ID in order to reference this table.
 
 The syntax for importing a table using a Fusion Table ID is as follows:
+
+
 ```javascript
-var fc = ee.FeatureCollection('ft:19YknBH-2mw2tl2ZGN6zDYpFaDx_10LP0lEl5r7Oh');
+var fc = ee.FeatureCollection('ft:1F4daSPf6KFxX8fM-mWi_ahqsd9Pgsw3FmCryDGID');
 ```
+
 Here, you may paste in you table ID, and rename your variable.
 
-So far, we have only created the variable that stores the data. If you want to add the data to the map, you can use the **Map.addLayer** function.
+Thus far, we have only created the variable that stores the data. If you want to add the data to the map, you can use the **Map.addLayer** function.
+
 ```javascript
 Map.addLayer(fc,{},'import')
 print(fc)
 ```
 The first argument should be the name of the variable you created previously. In the third argument (in quatations), you can name the layer as you'd like it to appear under the Layers tab. The fourth argument specifies if you want the layer to automatically appear. "false" means that the layer will only appear on the map when toggled on, under the Layers tab, which appears after you have run the **Map.addLayer** function in the right corner of the map window. Specifying "true" means that the layer will initially appear automatically. Click **"Run"** to run the script:
+
 ![The "Run" Button.](Run.jpg)
 
 Congratulations! You have now created a Fusion Table and imported your data into GEE.

@@ -1,0 +1,261 @@
+---
+title: Summary of Cucurbita Habitat Modeling 
+author: Daniel Carver. Colin Khoury 
+output:
+  html_document:
+    code_folding: hide
+    highlight: tango
+    theme: yeti
+    toc: yes
+---
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# install.packages("tmap")
+# install.packages("sf")
+# install.packages("DT")
+# install.packages("XML")
+# install.packages("scales")
+library(knitr)
+library(markdown)
+library(rmarkdown)
+library("tmap")
+library("raster")
+library("DT")
+# taxa <- "Cucurbita_cordata"
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# function for flitering list based on character values 
+include <- function (theList, toMatch){
+  matches <- unique (grep(paste(toMatch,collapse="|"), 
+                          theList, value=TRUE))
+  return(matches)
+}
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# taxa is the 
+###DC
+baseDir <- paste0(base_dr, '/', taxa)
+csv <- list.files(baseDir, pattern = ".csv", recursive = TRUE , full.names = TRUE)
+```
+
+
+### Summary Statistics for Model Runs for `r taxa`
+
+This table show the statistical results of all median models. 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+dfSum <- data.frame()
+runs <- list.dirs(baseDir,recursive = FALSE , full.names = FALSE)
+metrics <- include(csv, "eval_metrics.csv")
+for(i in 1:length(runs)){
+  value <- grepl(runs[i], metrics, fixed = TRUE)
+  if(any(value)){
+  dt1 <- read.csv(metrics[value])
+  dt1$run <- runs[i]
+  dfSum <- rbind(dfSum, dt1)
+  }else{
+    next
+  }
+}
+
+DT::datatable(dfSum)
+```
+
+### All Models Addative Map
+This map combines all threshold maps into one. The darkest areas are where all models agree that the location represents potential suitable habitat.  
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+tif <- list.files(path = baseDir, pattern = '.tif', recursive = TRUE, full.names = TRUE)
+thres <- include(tif, "spdist_thrsld")
+rasters <- lapply(thres,raster)
+size <- lapply(rasters, ncell)
+maxRas <- which.max(size)
+
+ras1 <- rasters[maxRas]
+ras1 <- ras1[[1]]
+rastersThin <- rasters[-c(maxRas)]
+
+ras1[is.na(ras1[])] <- 0 
+
+
+#build the first raster here 
+if(length(thres) > 0 ){
+  for(i in 1:length(rastersThin))
+    {
+    rast2 <- grepl(runs[i], metrics, fixed = TRUE)
+    if(any(rast2))
+      {
+      ras <- raster(thres[rast2])
+      ras[is.na(ras[])] <- 0 
+      ras <- extend(ras, extent(ras1), value = 0)
+      ras1 <- ras1 + ras
+      }else
+    {
+    next
+    }
+  }
+}else{
+  ras1 <- NA
+}
+
+ras1[ras1[] <= 0] <- NA 
+
+
+
+
+tmap_mode("view")
+if(class(ras1) == "RasterLayer"){
+  qtm(shp = ras1)
+}else{
+  print("no rasters are present")
+}
+```
+This map above is composed of `r length(rasters)` model results. 
+
+
+### Biome and Ecoregion Maps
+
+The map below shows the combination map of our two most conservative models. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+for(class in rasters){
+  bio <- grepl("bio", metrics, fixed = TRUE)
+  bioRast <- rasters[bio][[1]]
+}
+
+for(class in rasters){
+  eco <- grepl("ecoR", metrics, fixed = TRUE)
+  ecoRast <- rasters[eco][[1]]
+}
+
+for(class in rasters){
+  ecoV <- grepl("ecoV", metrics, fixed = TRUE)
+  ecoRast1 <- rasters[ecoV][[1]]
+}
+
+
+bio1 <- bioRast
+eco1 <- ecoRast
+ecoV <- ecoRast1
+
+ecoFull <- extend(eco1, extent(bio1), value = 0)
+ecoFullv <- extend(ecoV, extent(bio1), value = 0)
+
+eco1[is.na(eco1[])] <- 0 
+bio1[is.na(bio1[])] <- 0 
+ecoV[is.na(ecoV[])] <- 0 
+ecoBio <- ecoFull + bioRast + ecoFullv
+
+
+if(class(ecoBio) == "RasterLayer"){
+  qtm(shp = ecoBio)
+}else{
+  print("no rasters are present")
+}
+```
+
+### Ecoregion Variable Selection 5 reps 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+for(class in rasters){
+  testr <- grepl("testR", metrics, fixed = TRUE)
+    if(any(testr)){
+    testr <- rasters[testr][[1]]
+  }else{
+  print("no rasters are present")
+  }
+}
+
+
+if(class(testr) == "RasterLayer"){
+  qtm(shp = testr)
+}else{
+  print("no rasters are present")
+}
+```
+
+
+
+
+
+### EcoRegion Variable Selection 10 reps 
+The map below is an example of the prediction map that is limited to ecoregions in which known presense locations are found. A varible selection process was perform before the model was ran. 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+if(class(ecoRast1) == "RasterLayer"){
+  qtm(shp = ecoRast1)
+}else{
+  print("no rasters are present")
+}
+
+```
+
+### EcoRegion 
+The map below is an example of the prediction map that is limited to ecoregions in which known presense locations are found. 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+if(class(ecoRast) == "RasterLayer"){
+  qtm(shp = ecoRast)
+}else{
+  print("no rasters are present")
+}
+
+```
+
+
+### Biome 
+The map below is an example of the prediction map that is limited to biomes in which known presense locations are found. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+if(class(bioRast) == "RasterLayer"){
+  qtm(shp = bioRast)
+}else{
+  print("no rasters are present")
+}
+```
+
+### Country
+
+The map below is an example of the prediction map that is limited to the countries in which known presense locations are found. 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+for(class in rasters){
+  country <- grepl("count", metrics, fixed = TRUE)
+    if(any(country)){
+    country <- rasters[country][[1]]
+  }else{
+  print("no rasters are present")
+  }
+}
+
+
+if(class(country) == "RasterLayer"){
+  qtm(shp = country)
+}else{
+  print("no rasters are present")
+}
+```
+
+
+### World 
+
+The map below is an example of the prediction map that is based on background points generated from around the world. The model is constained to the countries in which the species is native. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+for(class in rasters){
+  v1 <- grepl('v1', metrics, fixed = TRUE)
+  if(any(v1)){
+    v1 <- rasters[v1][[1]]
+  }else{
+  print("no rasters are present")
+  }
+}
+
+
+
+
+if(class(v1) == "RasterLayer"){
+  qtm(shp = v1)
+}else{
+  print("no rasters are present")
+}
+```

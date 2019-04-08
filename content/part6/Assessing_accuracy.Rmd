@@ -1,0 +1,279 @@
+---
+title: "Assessing Accuracy of Variable Selection for Supervised Classification"
+author: "Dan Carver, Kaitlin Walker, Dane Coats, Megs Seeley, Erika Higa"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    highlight: tango
+    number_sections: yes
+    theme: journal
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+# Implementing Variable Selection Into Random Forest Modeling in Google Earth Engine
+This final tutorial will build upon the code created in **Calculating Indices and Extracting Values to Points in Google Earth Engine**. If you did not save that code, simply open the tutorial and copy the final complete code at the end into your GEE code editor.
+
+This section will iterate the random forest modeling process using the variables selected in **Variable Selection Using the rfUtilites Package in R**. 
+
+## Create New Random Forest Model
+First we will create a new set of training data using only the selected variables (green, NIR, and NDVI). We will use the same data collection (PA) to sample the Landsat data and build a classifier. 
+
+
+```javascript
+////// | | | Code from Calculating Indices and Extracting Values to Points in Google Earth Engine | | |
+//     V V V                  V V V
+//In R we identified Green, NIR, and NDVI as our final predictors.
+////// | | |                  | | |
+//     V V V                  V V V
+
+
+//Building a new classification 
+
+var predictors2 = nir.addBands(green).addBands(ndvi);
+
+//Sample the new image
+var samples2 = predictors2.sampleRegions({
+  collection: PA,
+  properties: ['presence'],
+  scale: 30 });
+print(samples2,'Updated training dataset');
+
+// Rerun the random forest classification
+var trainingClassifier2 = ee.Classifier.randomForest({
+  numberOfTrees: 10,
+  variablesPerSplit: 0,
+  minLeafPopulation: 1 ,
+  bagFraction: 0.5 ,
+  outOfBagMode: false ,
+  seed:7 }).train({
+    features: samples2,
+    classProperty: 'presence'});
+
+// Classify raster
+var classified2 = predictors2.classify(trainingClassifier2).clip(roi);
+
+
+// Visualize classification
+print(classified2, 'Updated Classified Image');
+Map.addLayer(classified2, {min:0, max:2, palette:['yellow', 'green', 'blue']}, 'Updated Aspen Classification', false);
+```
+
+![New Model](prime.png)
+
+## Compare Models
+
+A quick visual comparison indicates the images from the first and second (reduced predictor set) iterations are similar. To better compare the two classifications, we can subtract the first and second iterations (see code below). Note that this comparison is only visual. We will further assess the accuracy of our new model later. 
+
+
+```javascript
+var diffClassified = classified.subtract(classified2);
+Map.addLayer(diffClassified, {min:-1, max:1, palette:['white', 'green', 'blue']}, 'Difference between classifications', false);
+
+```
+
+![Differences](diff.png)
+
+The correlation plot displays correlation among our predictors with the top-ranked predictors listed in the upper left corner. We will remove predictors highly correlated with predictors of greater importance according to the rfUtilites. Here we define high correlation where the absolute value is greater than 0.80. Below we describe our step-by-step process for removing variables. 
+
+
+The subtracted image show where the first and second iteration agreed (green) or disagreed. White regions show where the second iteration (with only green, NIR, and NDVI as predictors) classified areas as having aspen and the first did not. Blue shows the inverse. The second iteration of the model classified more aspen in the highlands and less aspen in the foothills.
+
+#Assess Model Accuracy with Confusion Matrices
+We know that the model iterations classify our study area differently, but we have not assessed the accuracy of either. To create a confusion matrix, which is a widely-used metric for assessing model accuracy, we must first reserve some of our sampling points to test the data. If we test the model on the same dataset we used to train the data, we will get close to 100% accuracy and learn nothing about our model. Therefore, we will split the data in two. 
+
+## Split Sample Data
+Our methodology for splitting the dataset includes adding a new column populated by a random number from 0 to 1. Since we want a 70/30 split of training/test data, we will include all data with values below 0.7 in the training dataset. 
+
+```javascript
+// Add column with random value from 0-1
+var samplesRandom = samples2.randomColumn('random');
+
+// Split the samples 
+var split = 0.7;  
+var trainingSamples = samplesRandom.filter(ee.Filter.lt('random', split)); // Less than 0.7 ~70%
+var testSamples = samplesRandom.filter(ee.Filter.gte('random', split)); // Greater/Equal to 0.7 ~30%
+print(trainingSamples, 'training');
+
+
+//Train thrid classifier with training data
+var classifier3 = ee.Classifier.randomForest({
+  numberOfTrees: 10,
+  variablesPerSplit: 0,
+  minLeafPopulation: 1 ,
+  bagFraction: 0.5 ,
+  outOfBagMode: false,
+  seed:7 })
+  .train({
+    features: trainingSamples,
+    classProperty: 'presence',
+    inputProperties: ['nir', 'green', 'ndvi']});
+    
+// Classify the remaining 30% of data with the third classifier
+var testClassified = testSamples.classify(classifier3);
+```
+
+## Create Confusion Matrix
+We can now test the accuracy of our model by comparing the modeled outputs to the actual values of our test data by creating a confusion matrix. 
+
+
+```javascript
+// Print Confusion and Error Matrices
+var errorMatrix = testClassified.errorMatrix('presence', 'classification');
+var confusionMatrix = classifier3.confusionMatrix();
+
+print('Test Data Confusion Matrix', errorMatrix);
+print('GEE Confusion Matrix: ', confusionMatrix);
+print('Overall Accuracy: ', confusionMatrix.accuracy());
+
+```
+![Console with Confusion Matrix](confMatrix.png)
+
+Notice that we created two different confusion matrices. The first one, created with '.errorMatrix' and named 'Test Data Confusion Matrix' in the console uses the training data. It compares the predicted results with the actual results. The second matrix, created with '.confusionMatrix' and named 'GEE Confusion Matrix' also calculates the resubstitution error, but does not require us to split the data. We included an alternate method to GEE's version because functions in GEE are often opaque and inflexible. 
+
+The confusion matrix shows how many of the test points were predicted accurately and how many were inaccurate. 
+Let's put custom labels on the matrix.
+
+```
+                     Absent (Predicted)  | Present (Predicted)
+Absent (Actual)   |   True Negative      |    False Positive
+Present (Actual)  |   False Negative     |    True Positive
+```
+
+The above confusion matrix shows that, out of 134 points, 123 were correctly predicted and 11 were incorrect. With an accuracy of xx%, the model performed relatively well. 
+<br>
+If we were not satisfied with the results, we can iterate through the modeling process, trying to remove sources of error or bias. For example, we may realize that elevation would likely improve the model, so we may include a Digital Elevation Model from the Shuttle Radar Topography Mission (SRTM). These data are readily available through GEE. We might also need to add training points in key locations. 
+
+# Export the data
+Once we are satisfied without model, we will likely want to export the results from GEE. The below code exports our data to Google Drive.
+
+
+```javascript
+// Export the new classified image as a geotiff
+Export.image.toDrive({
+  image: classified2,
+	fileNamePrefix: 'Classified Image',
+  description: 'testoutput',
+  scale: 30,
+  fileFormat: 'GeoTIFF',
+  region: roi});
+```
+FeatureCollections can be exported as: CSV, SHP (shapefile), GeoJSON, KML, KMZ or TFRecord. We will export our points as a csv.
+
+```javascript
+Export.table.toDrive({
+  collection: samples2,
+  description:'PredictorPoints',
+  fileNamePrefix: 'Predictor_Points',
+  fileFormat: 'CSV'});
+```
+We will also save these point data as assets we can access from the Google Earth Engine Asset importation menu. To do this, we will give the command an assetId rather than a fileFormat.
+```javascript
+Export.table.toAsset({
+  collection: samples2,
+  description:'PredictorPoints_wReflectance',
+  assetId: 'Predictor_PointsAssest'});
+```
+
+## Conclusions
+Google Earth Engine is a useful tool for processing and analyzing NASA Earth observation datasets. Cloud computing reduces the processing and downloading time that serves as a barrier to entry into the remote sensing world. Hopefully this series empowers you to integrate NASA Earth observations and Google Earth Engine in your future work.
+
+# Final complete code for lesson
+
+```javascript
+////// | | | Code from Calculating Indices and Extracting Values to Points in Google Earth Engine | | |
+//     V V V                  V V V
+//In R we identified Green, NIR, and NDVI as our final predictors.
+////// | | |                  | | |
+//     V V V                  V V V
+
+
+//Building a new classification 
+
+var predictors2 = nir.addBands(green).addBands(ndvi);
+
+//Sample the new image
+var samples2 = predictors2.sampleRegions({
+  collection: PA,
+  properties: ['presence'],
+  scale: 30 });
+print(samples2,'Updated training dataset');
+
+// Rerun the random forest classification
+var trainingClassifier2 = ee.Classifier.randomForest({
+  numberOfTrees: 10,
+  variablesPerSplit: 0,
+  minLeafPopulation: 1 ,
+  bagFraction: 0.5 ,
+  outOfBagMode: false ,
+  seed:7 }).train({
+    features: samples2,
+    classProperty: 'presence'});
+
+// Classify raster
+var classified2 = predictors2.classify(trainingClassifier2).clip(roi);
+
+
+// Visualize classification
+print(classified2, 'Updated Classified Image');
+Map.addLayer(classified2, {min:0, max:2, palette:['yellow', 'green', 'blue']}, 'Updated Aspen Classification', false);
+
+var diffClassified = classified.subtract(classified2);
+Map.addLayer(diffClassified, {min:-1, max:1, palette:['white', 'green', 'blue']}, 'Difference between classifications', false);
+
+// Add column with random value from 0-1
+var samplesRandom = samples2.randomColumn('random');
+
+// Split the samples 
+var split = 0.7;  
+var trainingSamples = samplesRandom.filter(ee.Filter.lt('random', split)); // Less than 0.7 ~70%
+var testSamples = samplesRandom.filter(ee.Filter.gte('random', split)); // Greater/Equal to 0.7 ~30%
+print(trainingSamples, 'training');
+
+
+//Train thrid classifier with training data
+var classifier3 = ee.Classifier.randomForest({
+  numberOfTrees: 10,
+  variablesPerSplit: 0,
+  minLeafPopulation: 1 ,
+  bagFraction: 0.5 ,
+  outOfBagMode: false,
+  seed:7 })
+  .train({
+    features: trainingSamples,
+    classProperty: 'presence',
+    inputProperties: ['nir', 'green', 'ndvi']});
+    
+// Classify the remaining 30% of data with the third classifier
+var testClassified = testSamples.classify(classifier3);
+
+// Print Confusion and Error Matrices
+var errorMatrix = testClassified.errorMatrix('presence', 'classification');
+var confusionMatrix = classifier3.confusionMatrix();
+
+print('Test Data Confusion Matrix', errorMatrix);
+print('GEE Confusion Matrix: ', confusionMatrix);
+print('Overall Accuracy: ', confusionMatrix.accuracy());
+
+// Export the new classified image as a geotiff
+Export.image.toDrive({
+  image: classified2,
+    fileNamePrefix: 'Classified Image',
+  description: 'testoutput',
+  scale: 30,
+  fileFormat: 'GeoTIFF',
+  region: roi});
+  
+Export.table.toDrive({
+  collection: samples2,
+  description:'PredictorPoints',
+  fileNamePrefix: 'Predictor_Points',
+  fileFormat: 'CSV'});
+  
+Export.table.toAsset({
+  collection: samples2,
+  description:'PredictorPoints_wReflectance',
+  assetId: 'Predictor_PointsAssest'});
+```
+
