@@ -113,11 +113,11 @@ We will define our indices in two parts. First, we will define our individual ba
 
 
 ```javascript
-var red = LS8_SR2.select('B3').rename("red");
-var green= LS8_SR2.select('B2').rename("green");
-var blue = LS8_SR2.select('B1').rename("blue");
-var nir = LS8_SR2.select('B4').rename("nir");
-var swir1 = LS8_SR2.select('B5').rename("swir1");
+var red = LS8_SR2.select('B4').rename("red");
+var green= LS8_SR2.select('B3').rename("green");
+var blue = LS8_SR2.select('B2').rename("blue");
+var nir = LS8_SR2.select('B5').rename("nir");
+var swir1 = LS8_SR2.select('B6').rename("swir1");
 var swir2 = LS8_SR2.select('B7').rename("swir2");
 print(red,'red');
 Map.addLayer(red,{},'red',false);
@@ -135,8 +135,6 @@ Normalized Difference Vegetation Index (NDVI)
 <br>
  The equation for NDVI is:
 
-**NDVI = (Band 4 - Band 3)/(Band 4 + Band 3)**  
-or,  
 **NDVI = (nir - red)/(nir + red)**
 
 The code below includes band math that defines an NDVI variable:
@@ -151,8 +149,6 @@ Normalized Difference Water Index (NDWI)
 <br>
 The equation for NDWI is:
 
-**NDWI = (Band 3 - Band 5)/(Band 3 + Band 5)**  
-or,  
 **NDWI = (green - nir)/(green + nir)**
 
 
@@ -165,13 +161,13 @@ Tasselled Cap Brightness (TCB) Index
 
 ```javascript
 var TCB = LS8_SR2.expression(
-  "0.2043 * B1 + 0.4158 * B2 + 0.5524 * B3 + 0.5741 * B4 + 0.3124 * B5 + 0.2303 * B7" , {
-  'B1': blue,
-  'B2': green,
-  'B3': red,
-  'B4': nir,
-  'B5': swir1,
-  'B7': swir2
+  "0.3037 * B2 + 0.2793 * B3 + 0.4743 * B4 + 0.5585 * B5 + 0.5082 * B6 + 0.1863 * B7" , {
+  'B2': blue,
+  'B3': green,
+  'B4': red,
+  'B5': nir,
+  'B6': swir1,
+  'B7': swir1
   }).rename("TCB");
 
 Map.addLayer(TCB, {},'TCB',false);
@@ -355,11 +351,11 @@ print(LS8_SR2,visTrueColor, 'LS8_SR2 - masked')
 
 // define indices
 // first define individual bands as variables
-var red = LS8_SR2.select('B3').rename("red")
-var green= LS8_SR2.select('B2').rename("green")
-var blue = LS8_SR2.select('B1').rename("blue")
-var nir = LS8_SR2.select('B4').rename("nir")
-var swir1 = LS8_SR2.select('B5').rename("swir1")
+var red = LS8_SR2.select('B4').rename("red")
+var green= LS8_SR2.select('B3').rename("green")
+var blue = LS8_SR2.select('B2').rename("blue")
+var nir = LS8_SR2.select('B5').rename("nir")
+var swir1 = LS8_SR2.select('B6').rename("swir1")
 var swir2 = LS8_SR2.select('B7').rename("swir2")
 print(red,'red')
 Map.addLayer(red,{},'red',false)
@@ -376,13 +372,13 @@ Map.addLayer(ndwi, {},'NDWI',false);
 
 // calculate TCB
 var TCB = LS8_SR2.expression(
-  "0.2043 * B1 + 0.4158 * B2 + 0.5524 * B3 + 0.5741 * B4 + 0.3124 * B5 + 0.2303 * B7" , {
-  'B1': blue,
-  'B2': green,
-  'B3': red,
-  'B4': nir,
-  'B5': swir1,
-  'B7': swir2
+  "0.3037 * B2 + 0.2793 * B3 + 0.4743 * B4 + 0.5585 * B5 + 0.5082 * B6 + 0.1863 * B7" , {
+  'B2': blue,
+  'B3': green,
+  'B4': red,
+  'B5': nir,
+  'B6': swir1,
+  'B7': swir1
   }).rename("TCB");
 
 Map.addLayer(TCB, {},'TCB',false);
